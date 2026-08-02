@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eight-Layer Cycle Marker</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090d14;
+      --panel: #111824;
+      --panel-2: #172131;
+      --border: #2d3a4f;
+      --text: #eef4fc;
+      --muted: #94a3b8;
+      --accent: #7dd3fc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #17243a, var(--bg) 58%);
+      color: var(--text);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button, input { font: inherit; }
+
+    main {
+      width: min(1160px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 24px 0 36px;
+    }
+
+    h1 { margin: 0 0 6px; font-size: clamp(1.5rem, 3vw, 2.15rem); }
+    h2 { margin: 0 0 12px; font-size: 1rem; }
+    p { margin: 0; }
+    .subtitle, .hint { color: var(--muted); }
+    .subtitle { margin-bottom: 20px; }
+    .hint { margin-top: 10px; font-size: .84rem; line-height: 1.45; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(300px, .75fr);
+      gap: 22px;
+      align-items: start;
+    }
+
+    .clock-wrap {
+      width: min(100%, 720px);
+      margin: auto;
+      aspect-ratio: 1;
+    }
+
+    canvas { display: block; width: 100%; height: 100%; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      margin-top: 14px;
+    }
+
+    .stat, .card, .layer {
+      border: 1px solid var(--border);
+      background: color-mix(in srgb, var(--panel) 94%, transparent);
+      border-radius: 13px;
+    }
+
+    .stat { padding: 12px 13px; }
+    .stat small { display: block; color: var(--muted); }
+    .stat strong { display: block; margin-top: 3px; font-size: 1.22rem; }
+
+    aside { display: grid; gap: 13px; }
+    .card { padding: 14px; }
+
+    .range-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      margin-top: 13px;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 9px;
+      background: var(--panel-2);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    button:hover { border-color: var(--accent); }
+    button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    #layers { display: grid; gap: 7px; }
+
+    .layer {
+      display: grid;
+      grid-template-columns: minmax(70px, 1fr) 84px 42px;
+      gap: 8px;
+      align-items: center;
+      padding: 9px;
+      transition: opacity .12s ease;
+    }
+
+    .layer[data-disabled="true"] { opacity: .42; }
+
+    .layer label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 650;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--color);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color) 20%, transparent);
+    }
+
+    input[type="number"] {
+      min-width: 0;
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px;
+      background: #0c121c;
+      color: var(--text);
+    }
+
+    input[type="color"] {
+      width: 40px;
+      height: 33px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+      background: #0c121c;
+    }
+
+    @media (max-width: 840px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 620px) {
+      main { width: min(100% - 16px, 1160px); padding-top: 16px; }
+      aside, .stats, .buttons { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Eight-Layer Cycle Marker</h1>
+    <p class="subtitle">One hand spins continuously while eight independent equal-division sets leave persistent colored markers on the same cycle.</p>
+
+    <div class="layout">
+      <section>
+        <div class="clock-wrap">
+          <canvas id="clock" width="900" height="900" aria-label="Continuously rotating eight-layer cycle marker"></canvas>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><small>Signed turns</small><strong id="turns">0.00</strong></div>
+          <div class="stat"><small>Total triggers</small><strong id="triggers">0</strong></div>
+          <div class="stat"><small>Direction</small><strong id="direction">Forward</strong></div>
+        </div>
+      </section>
+
+      <aside>
+        <section class="card">
+          <h2>Motion</h2>
+          <label class="range-line" for="speed">
+            <span>Seconds per turn</span>
+            <strong id="speed-value">6.0</strong>
+          </label>
+          <input id="speed" type="range" min="0.5" max="20" value="6" step="0.5">
+
+          <div class="buttons">
+            <button id="reverse" type="button">Reverse</button>
+            <button id="clear" type="button">Clear marks</button>
+            <button id="reset" type="button">Reset all</button>
+          </div>
+          <p class="hint">The hand never pauses. Reverse changes both its motion and trigger direction.</p>
+        </section>
+
+        <section class="card">
+          <h2>Division sets</h2>
+          <div id="layers"></div>
+          <p class="hint">Each value is the number of equal trigger positions per turn. A value of <strong>0</strong> hides and disables that set.</p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    'use strict';
+
+    const canvas = document.getElementById('clock');
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const speed = document.getElementById('speed');
+    const speedValue = document.getElementById('speed-value');
+    const turnsText = document.getElementById('turns');
+    const triggersText = document.getElementById('triggers');
+    const directionText = document.getElementById('direction');
+    const reverseButton = document.getElementById('reverse');
+    const clearButton = document.getElementById('clear');
+    const resetButton = document.getElementById('reset');
+    const layerHost = document.getElementById('layers');
+
+    const TAU = Math.PI * 2;
+    const ZERO_ANGLE = -Math.PI / 2;
+    const defaults = Object.freeze([
+      { divisions: 1, color: '#38bdf8' },
+      { divisions: 2, color: '#fb7185' },
+      { divisions: 3, color: '#4ade80' },
+      { divisions: 4, color: '#c084fc' },
+      { divisions: 5, color: '#fbbf24' },
+      { divisions: 6, color: '#2dd4bf' },
+      { divisions: 8, color: '#f472b6' },
+      { divisions: 12, color: '#a3e635' }
+    ]);
+
+    const layers = defaults.map(item => ({ ...item, lastStep: 0, hits: new Map() }));
+    let turns = 0;
+    let direction = 1;
+    let totalTriggers = 0;
+    let previousTime = performance.now();
+
+    const normalizeSlot = (step, divisions) => ((step % divisions) + divisions) % divisions;
+
+    function currentStep(layer) {
+      if (layer.divisions <= 0) return 0;
+      const scaled = turns * layer.divisions;
+      return direction > 0 ? Math.floor(scaled) : Math.ceil(scaled);
+    }
+
+    function clearLayer(layer) {
+      layer.hits.clear();
+      layer.lastStep = currentStep(layer);
+    }
+
+    function processLayer(layer) {
+      if (layer.divisions <= 0) return;
+
+      const target = currentStep(layer);
+      if (target === layer.lastStep) return;
+
+      const increment = target > layer.lastStep ? 1 : -1;
+      let step = layer.lastStep + increment;
+      let safety = 0;
+
+      while ((increment > 0 ? step <= target : step >= target) && safety < 512) {
+        const slot = normalizeSlot(step, layer.divisions);
+        layer.hits.set(slot, (layer.hits.get(slot) ?? 0) + 1);
+        totalTriggers += 1;
+        step += increment;
+        safety += 1;
+      }
+
+      layer.lastStep = target;
+    }
+
+    function circle(x, y, radius, fill, stroke = null, width = 1) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, TAU);
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = width; ctx.stroke(); }
+    }
+
+    function drawFace() {
+      const center = canvas.width / 2;
+      const radius = canvas.width * 0.43;
+      ctx.fillStyle = '#080c13';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const gradient = ctx.createRadialGradient(center, center * .8, radius * .08, center, center, radius);
+      gradient.addColorStop(0, '#19243a');
+      gradient.addColorStop(1, '#0d141f');
+      circle(center, center, radius, gradient, '#34435a', 5);
+
+      ctx.save();
+      ctx.setLineDash([4, 12]);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(center, center, radius * .88, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '600 22px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('0', center, center - radius - 24);
+    }
+
+    function drawMarkers() {
+      const center = canvas.width / 2;
+      const baseRadius = canvas.width * .378;
+
+      layers.forEach((layer, layerIndex) => {
+        if (layer.divisions <= 0) return;
+        const radius = baseRadius - layerIndex * 3.5;
+
+        for (const [slot, hitCount] of layer.hits) {
+          const angle = ZERO_ANGLE + slot / layer.divisions * TAU;
+          const x = center + Math.cos(angle) * radius;
+          const y = center + Math.sin(angle) * radius;
+          const rings = Math.min(hitCount, 6);
+
+          for (let ring = 0; ring < rings; ++ring) {
+            ctx.globalAlpha = .28 + ring * .1;
+            ctx.strokeStyle = layer.color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(x, y, 7 + ring * 2.4, 0, TAU);
+            ctx.stroke();
+          }
+
+          ctx.globalAlpha = 1;
+          circle(x, y, 5.5, layer.color, '#080c13', 1.5);
+        }
+      });
+
+      ctx.globalAlpha = 1;
+    }
+
+    function drawHand() {
+      const center = canvas.width / 2;
+      const normalized = ((turns % 1) + 1) % 1;
+      const angle = ZERO_ANGLE + normalized * TAU;
+      const length = canvas.width * .325;
+      const x = center + Math.cos(angle) * length;
+      const y = center + Math.sin(angle) * length;
+
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#020617';
+      ctx.lineWidth = 15;
+      ctx.beginPath();
+      ctx.moveTo(center, center);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#7dd3fc';
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(center, center);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+
+      circle(center, center, 18, '#7dd3fc', '#020617', 5);
+      circle(center, center, 6, '#e0f2fe');
+    }
+
+    function draw() {
+      drawFace();
+      drawMarkers();
+      drawHand();
+    }
+
+    function buildControls() {
+      layerHost.replaceChildren();
+
+      layers.forEach((layer, index) => {
+        const row = document.createElement('div');
+        row.className = 'layer';
+        row.dataset.disabled = String(layer.divisions === 0);
+        row.style.setProperty('--color', layer.color);
+
+        const label = document.createElement('label');
+        label.htmlFor = `layer-${index}`;
+        const dot = document.createElement('span');
+        dot.className = 'dot';
+        const name = document.createElement('span');
+        name.textContent = `Set ${index + 1}`;
+        label.append(dot, name);
+
+        const ratio = document.createElement('input');
+        ratio.id = `layer-${index}`;
+        ratio.type = 'number';
+        ratio.min = '0';
+        ratio.max = '96';
+        ratio.step = '1';
+        ratio.value = String(layer.divisions);
+        ratio.title = `Equal divisions for set ${index + 1}`;
+        ratio.addEventListener('change', () => {
+          const parsed = Number.parseInt(ratio.value, 10);
+          layer.divisions = Number.isFinite(parsed) ? Math.max(0, Math.min(96, parsed)) : 0;
+          ratio.value = String(layer.divisions);
+          clearLayer(layer);
+          row.dataset.disabled = String(layer.divisions === 0);
+        });
+
+        const color = document.createElement('input');
+        color.type = 'color';
+        color.value = layer.color;
+        color.title = `Color for set ${index + 1}`;
+        color.addEventListener('input', () => {
+          layer.color = color.value;
+          row.style.setProperty('--color', layer.color);
+        });
+
+        row.append(label, ratio, color);
+        layerHost.append(row);
+      });
+    }
+
+    function resetAll() {
+      turns = 0;
+      direction = 1;
+      totalTriggers = 0;
+      speed.value = '6';
+      speedValue.textContent = '6.0';
+      directionText.textContent = 'Forward';
+      reverseButton.textContent = 'Reverse';
+
+      defaults.forEach((item, index) => {
+        layers[index].divisions = item.divisions;
+        layers[index].color = item.color;
+        layers[index].lastStep = 0;
+        layers[index].hits.clear();
+      });
+
+      buildControls();
+    }
+
+    speed.addEventListener('input', () => {
+      speedValue.textContent = Number(speed.value).toFixed(1);
+    });
+
+    reverseButton.addEventListener('click', () => {
+      direction *= -1;
+      layers.forEach(layer => { layer.lastStep = currentStep(layer); });
+      directionText.textContent = direction > 0 ? 'Forward' : 'Reverse';
+      reverseButton.textContent = direction > 0 ? 'Reverse' : 'Forward';
+    });
+
+    clearButton.addEventListener('click', () => {
+      totalTriggers = 0;
+      layers.forEach(clearLayer);
+    });
+
+    resetButton.addEventListener('click', resetAll);
+
+    function animate(timestamp) {
+      const delta = Math.min((timestamp - previousTime) / 1000, .1);
+      previousTime = timestamp;
+      turns += direction * delta / Number(speed.value);
+      layers.forEach(processLayer);
+      draw();
+      turnsText.textContent = turns.toFixed(2);
+      triggersText.textContent = totalTriggers.toLocaleString();
+      requestAnimationFrame(animate);
+    }
+
+    buildControls();
+    draw();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
