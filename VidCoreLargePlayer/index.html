@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>VidCore Large Player</title>
+<style>
+:root{
+  --bg:#07090d;
+  --panel:#10151d;
+  --panel2:#171d27;
+  --border:#2a3444;
+  --text:#f5f7fb;
+  --muted:#9ba7b8;
+  --accent:#7c5cff;
+  --accent2:#9781ff;
+  --danger:#ff7b89;
+  --radius:14px;
+}
+*{box-sizing:border-box}
+html,body{
+  margin:0;
+  min-height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font:500 15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+body{
+  background:
+    radial-gradient(circle at 8% -8%,rgb(124 92 255/.22),transparent 34rem),
+    var(--bg);
+}
+button,input,select{font:inherit}
+button{
+  border:0;
+  color:inherit;
+  cursor:pointer;
+}
+.app{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 300px;
+}
+.main{
+  min-width:0;
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr);
+}
+.toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:9px;
+  padding:14px 16px;
+  border-bottom:1px solid rgb(255 255 255/.08);
+  background:rgb(8 10 15/.92);
+  backdrop-filter:blur(18px);
+}
+.brand{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  margin-right:6px;
+  font-size:19px;
+  font-weight:900;
+  letter-spacing:-.04em;
+}
+.logo{
+  display:grid;
+  width:34px;
+  height:34px;
+  place-items:center;
+  border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),#39c5ff);
+}
+.input,.select{
+  min-height:42px;
+  padding:9px 12px;
+  color:var(--text);
+  outline:0;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--panel2);
+}
+.input:focus,.select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgb(124 92 255/.15);
+}
+.id-input{
+  width:150px;
+}
+.base-input{
+  min-width:220px;
+  flex:1;
+}
+.small-number{
+  width:86px;
+}
+.button{
+  min-height:42px;
+  padding:9px 14px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--panel);
+  font-weight:800;
+}
+.button:hover{border-color:var(--accent)}
+.button.primary{
+  border-color:transparent;
+  background:var(--accent);
+}
+.button.primary:hover{background:var(--accent2)}
+.button.danger{
+  color:#ff9ba6;
+  border-color:rgb(255 123 137/.35);
+  background:rgb(255 123 137/.1);
+}
+.player-wrap{
+  position:relative;
+  min-height:0;
+  padding:12px;
+}
+iframe{
+  display:block;
+  width:100%;
+  height:calc(100vh - 80px);
+  min-height:650px;
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  background:#000;
+  box-shadow:0 24px 80px rgb(0 0 0/.36);
+}
+.empty{
+  position:absolute;
+  inset:12px;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  border:1px dashed var(--border);
+  border-radius:var(--radius);
+  background:linear-gradient(135deg,rgb(124 92 255/.08),transparent),var(--panel);
+  color:var(--muted);
+  text-align:center;
+}
+.empty strong{
+  display:block;
+  margin-bottom:6px;
+  color:var(--text);
+  font-size:21px;
+}
+.hidden{display:none!important}
+.sidebar{
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  min-height:100vh;
+  border-left:1px solid rgb(255 255 255/.08);
+  background:#0b0e14;
+}
+.sidebar-header{
+  padding:18px;
+  border-bottom:1px solid rgb(255 255 255/.08);
+}
+.sidebar-header h2{
+  margin:0 0 5px;
+  font-size:17px;
+}
+.hint{
+  color:var(--muted);
+  font-size:12px;
+}
+.favorites{
+  display:grid;
+  align-content:start;
+  gap:9px;
+  padding:13px;
+  overflow:auto;
+}
+.favorite{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:7px;
+}
+.favorite-load{
+  min-width:0;
+  padding:10px 11px;
+  overflow:hidden;
+  border:1px solid var(--border);
+  border-radius:10px;
+  color:var(--text);
+  background:var(--panel);
+  text-align:left;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.favorite-load:hover{border-color:var(--accent)}
+.favorite-remove{
+  width:42px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:var(--panel);
+}
+.favorite-remove:hover{
+  color:#ff9ba6;
+  border-color:rgb(255 123 137/.5);
+}
+.sidebar-footer{
+  display:grid;
+  gap:8px;
+  padding:13px;
+  border-top:1px solid rgb(255 255 255/.08);
+}
+.status{
+  min-height:18px;
+  color:var(--muted);
+  font-size:12px;
+  overflow-wrap:anywhere;
+}
+.status.error{color:var(--danger)}
+.status.ok{color:#55d59a}
+.empty-list{
+  padding:24px 12px;
+  color:var(--muted);
+  text-align:center;
+  font-size:13px;
+}
+@media(max-width:1100px){
+  .app{grid-template-columns:1fr}
+  .sidebar{
+    min-height:unset;
+    max-height:360px;
+    border-top:1px solid rgb(255 255 255/.08);
+    border-left:0;
+  }
+  iframe{
+    height:72vh;
+    min-height:500px;
+  }
+}
+@media(max-width:720px){
+  .toolbar{align-items:stretch}
+  .brand{width:100%}
+  .base-input,.id-input,.select,.small-number{width:100%;min-width:0}
+  .button{flex:1}
+  iframe{
+    height:65vh;
+    min-height:420px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="main">
+    <header class="toolbar">
+      <div class="brand"><span class="logo">▶</span><span>VidCore Player</span></div>
+
+      <input
+        id="baseUrl"
+        class="input base-input"
+        type="url"
+        value="https://vidcore.net"
+        aria-label="Base URL"
+        autocomplete="off"
+        spellcheck="false">
+
+      <select id="mode" class="select" aria-label="Media type">
+        <option value="movie">Movie</option>
+        <option value="tv">TV</option>
+      </select>
+
+      <input
+        id="mediaId"
+        class="input id-input"
+        value="1"
+        aria-label="Media ID"
+        autocomplete="off"
+        spellcheck="false">
+
+      <input
+        id="season"
+        class="input small-number hidden"
+        type="number"
+        min="0"
+        step="1"
+        value="1"
+        aria-label="Season">
+
+      <input
+        id="episode"
+        class="input small-number hidden"
+        type="number"
+        min="1"
+        step="1"
+        value="1"
+        aria-label="Episode">
+
+      <button id="playButton" class="button primary" type="button">Play</button>
+      <button id="nextButton" class="button" type="button">Next</button>
+      <button id="favoriteButton" class="button" type="button">★ Favorite</button>
+      <button id="fullscreenButton" class="button" type="button">Fullscreen</button>
+    </header>
+
+    <main id="playerWrap" class="player-wrap">
+      <div id="emptyState" class="empty">
+        <div>
+          <strong>Ready</strong>
+          Starts at movie ID 1. Press Play, then Next to move forward manually.
+        </div>
+      </div>
+
+      <iframe
+        id="player"
+        class="hidden"
+        title="Embedded media player"
+        allow="autoplay; encrypted-media; fullscreen; picture-in-picture; web-share"
+        allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin">
+      </iframe>
+    </main>
+  </section>
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Favorites</h2>
+      <div class="hint">Saved in this browser.</div>
+    </div>
+
+    <div id="favorites" class="favorites"></div>
+
+    <div class="sidebar-footer">
+      <button id="clearFavoritesButton" class="button danger" type="button">Clear favorites</button>
+      <div id="status" class="status">Movie ID 1 is ready.</div>
+    </div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+
+const keys = {
+  favorites: "vidcoreLargePlayer.favorites",
+  baseUrl: "vidcoreLargePlayer.baseUrl",
+  mode: "vidcoreLargePlayer.mode",
+  mediaId: "vidcoreLargePlayer.mediaId",
+  season: "vidcoreLargePlayer.season",
+  episode: "vidcoreLargePlayer.episode"
+};
+
+const $ = selector => document.querySelector(selector);
+
+const baseUrlInput = $("#baseUrl");
+const modeSelect = $("#mode");
+const mediaIdInput = $("#mediaId");
+const seasonInput = $("#season");
+const episodeInput = $("#episode");
+const player = $("#player");
+const emptyState = $("#emptyState");
+const favoritesElement = $("#favorites");
+const statusElement = $("#status");
+
+function setStatus(message, type = "") {
+  statusElement.textContent = message;
+  statusElement.className = `status ${type}`.trim();
+}
+
+function normalizeBaseUrl(value) {
+  const url = new URL(value.trim());
+
+  if (url.protocol !== "https:") {
+    throw new Error("Base URL must use HTTPS.");
+  }
+
+  return url.origin + url.pathname.replace(/\/+$/, "");
+}
+
+function normalizeId(value) {
+  const input = value.trim();
+
+  const imdb = input.match(/tt\d{7,10}/i);
+  if (imdb) {
+    return imdb[0].toLowerCase();
+  }
+
+  if (/^\d+$/.test(input)) {
+    return String(Number.parseInt(input, 10));
+  }
+
+  throw new Error("Use a numeric ID or IMDb ID.");
+}
+
+function readPositiveInteger(value, label, minimum) {
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed) || parsed < minimum) {
+    throw new Error(`${label} must be ${minimum} or higher.`);
+  }
+
+  return parsed;
+}
+
+function currentEntry() {
+  const mode = modeSelect.value;
+  const id = normalizeId(mediaIdInput.value);
+  const baseUrl = normalizeBaseUrl(baseUrlInput.value);
+
+  if (mode === "movie") {
+    return { baseUrl, mode, id };
+  }
+
+  return {
+    baseUrl,
+    mode,
+    id,
+    season: readPositiveInteger(seasonInput.value, "Season", 0),
+    episode: readPositiveInteger(episodeInput.value, "Episode", 1)
+  };
+}
+
+function entryKey(entry) {
+  return entry.mode === "movie"
+    ? `${entry.baseUrl}|movie|${entry.id}`
+    : `${entry.baseUrl}|tv|${entry.id}|${entry.season}|${entry.episode}`;
+}
+
+function entryLabel(entry) {
+  return entry.mode === "movie"
+    ? `Movie ${entry.id}`
+    : `TV ${entry.id} · S${entry.season} E${entry.episode}`;
+}
+
+function buildUrl(entry) {
+  const path = entry.mode === "movie"
+    ? `/movie/${encodeURIComponent(entry.id)}`
+    : `/tv/${encodeURIComponent(entry.id)}/${entry.season}/${entry.episode}`;
+
+  const url = new URL(entry.baseUrl + path);
+  url.searchParams.set("autoPlay", "false");
+  url.searchParams.set("title", "true");
+  url.searchParams.set("poster", "true");
+  url.searchParams.set("fullscreenButton", "true");
+  return url.href;
+}
+
+function saveCurrentState(entry) {
+  localStorage.setItem(keys.baseUrl, entry.baseUrl);
+  localStorage.setItem(keys.mode, entry.mode);
+  localStorage.setItem(keys.mediaId, entry.id);
+
+  if (entry.mode === "tv") {
+    localStorage.setItem(keys.season, String(entry.season));
+    localStorage.setItem(keys.episode, String(entry.episode));
+  }
+}
+
+function play(entry = currentEntry()) {
+  try {
+    const url = buildUrl(entry);
+
+    baseUrlInput.value = entry.baseUrl;
+    modeSelect.value = entry.mode;
+    mediaIdInput.value = entry.id;
+
+    if (entry.mode === "tv") {
+      seasonInput.value = entry.season;
+      episodeInput.value = entry.episode;
+    }
+
+    updateModeFields();
+    saveCurrentState(entry);
+
+    player.src = url;
+    player.classList.remove("hidden");
+    emptyState.classList.add("hidden");
+
+    setStatus(`Loaded ${entryLabel(entry)}.`, "ok");
+  } catch (error) {
+    setStatus(error.message, "error");
+  }
+}
+
+function next() {
+  try {
+    const entry = currentEntry();
+
+    if (entry.mode === "movie") {
+      if (!/^\d+$/.test(entry.id)) {
+        throw new Error("Next requires a numeric movie ID.");
+      }
+
+      entry.id = String(Number.parseInt(entry.id, 10) + 1);
+    } else {
+      entry.episode += 1;
+    }
+
+    play(entry);
+  } catch (error) {
+    setStatus(error.message, "error");
+  }
+}
+
+function getFavorites() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(keys.favorites) ?? "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFavorites(favorites) {
+  localStorage.setItem(keys.favorites, JSON.stringify(favorites));
+}
+
+function addFavorite() {
+  try {
+    const entry = currentEntry();
+    const favorites = getFavorites();
+    const key = entryKey(entry);
+
+    if (favorites.some(item => entryKey(item) === key)) {
+      setStatus("Already in favorites.");
+      return;
+    }
+
+    favorites.unshift(entry);
+    saveFavorites(favorites);
+    renderFavorites();
+    setStatus(`Favorited ${entryLabel(entry)}.`, "ok");
+  } catch (error) {
+    setStatus(error.message, "error");
+  }
+}
+
+function removeFavorite(key) {
+  const favorites = getFavorites().filter(item => entryKey(item) !== key);
+  saveFavorites(favorites);
+  renderFavorites();
+}
+
+function renderFavorites() {
+  const favorites = getFavorites();
+
+  if (!favorites.length) {
+    favoritesElement.innerHTML = '<div class="empty-list">No favorites yet.</div>';
+    return;
+  }
+
+  favoritesElement.replaceChildren();
+
+  for (const entry of favorites) {
+    const row = document.createElement("div");
+    row.className = "favorite";
+
+    const loadButton = document.createElement("button");
+    loadButton.type = "button";
+    loadButton.className = "favorite-load";
+    loadButton.textContent = entryLabel(entry);
+    loadButton.title = buildUrl(entry);
+    loadButton.addEventListener("click", () => play(entry));
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "favorite-remove";
+    removeButton.textContent = "×";
+    removeButton.title = "Remove favorite";
+    removeButton.addEventListener("click", () => removeFavorite(entryKey(entry)));
+
+    row.append(loadButton, removeButton);
+    favoritesElement.append(row);
+  }
+}
+
+function updateModeFields() {
+  const tv = modeSelect.value === "tv";
+  seasonInput.classList.toggle("hidden", !tv);
+  episodeInput.classList.toggle("hidden", !tv);
+}
+
+$("#playButton").addEventListener("click", () => play());
+$("#nextButton").addEventListener("click", next);
+$("#favoriteButton").addEventListener("click", addFavorite);
+
+$("#fullscreenButton").addEventListener("click", async () => {
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await $("#playerWrap").requestFullscreen();
+    }
+  } catch (error) {
+    setStatus(`Fullscreen failed: ${error.message}`, "error");
+  }
+});
+
+$("#clearFavoritesButton").addEventListener("click", () => {
+  saveFavorites([]);
+  renderFavorites();
+  setStatus("Favorites cleared.");
+});
+
+modeSelect.addEventListener("change", updateModeFields);
+
+mediaIdInput.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    play();
+  }
+});
+
+baseUrlInput.value = localStorage.getItem(keys.baseUrl) || "https://vidcore.net";
+modeSelect.value = localStorage.getItem(keys.mode) || "movie";
+mediaIdInput.value = localStorage.getItem(keys.mediaId) || "1";
+seasonInput.value = localStorage.getItem(keys.season) || "1";
+episodeInput.value = localStorage.getItem(keys.episode) || "1";
+
+updateModeFields();
+renderFavorites();
+</script>
+</body>
+</html>
