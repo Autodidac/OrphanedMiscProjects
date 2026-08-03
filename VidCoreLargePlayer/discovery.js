@@ -332,6 +332,12 @@
     $("#recommendedPanel")?.classList.toggle("hidden", panel !== "recommended");
   };
 
+  $("#resolveListButton")?.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    resolveSelectedList().catch(error => setStatus(error.message, "error"));
+  }, true);
+
   $("#recommendedCards")?.addEventListener("click", event => {
     const button = event.target.closest("[data-recommend-index]");
     if (!button) return;
