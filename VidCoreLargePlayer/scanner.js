@@ -3,8 +3,9 @@
 (() => {
   const QUEUE_KEY = "vidcoreLibrary.discoveryQueue";
   const QUEUE_LIMIT = 40;
-  const SCAN_DELAY_MS = 650;
+  const CANDIDATE_DELAY_MS = 900;
   const RANDOM_MAX_ID = 2000000;
+  const MIN_RELEASE_YEAR = 1910;
   const prefetched = new Map();
   let activeScan = null;
 
@@ -171,37 +172,79 @@
     return isResolvedMatch(entry, metadata) ? metadata : null;
   }
 
-  async function scanNumeric(direction, explicitStart = null) {
-    if (cancelScan()) return;
-    const current = currentEntry();
-    if (!/^\d+$/.test(current.id)) {
-      setStatus("Sequential discovery requires a numeric TMDB ID.", "warn");
-      return;
-    }
+  function idProperty(mode) {
+    return mode === "movie"
+      ? { property: "P4947", variable: "movieTmdb" }
+      : { property: "P4983", variable: "tvTmdb" };
+  }
 
+  function neighborPickQuery(mode, boundaryId, direction) {
+    const { property, variable } = idProperty(mode);
+    const comparison = direction > 0 ? ">" : "<";
+    const order = direction > 0 ? "ASC" : "DESC";
+    return `SELECT ?${variable} ?numericId WHERE {
+      ?item wdt:${property} ?${variable}.
+      BIND(xsd:integer(?${variable}) AS ?numericId)
+      FILTER(?numericId ${comparison} ${Number(boundaryId)})
+    } ORDER BY ${order}(?numericId) LIMIT 1`;
+  }
+
+  function seedPickQuery(mode, seed) {
+    const { property, variable } = idProperty(mode);
+    return `SELECT ?${variable} ?numericId WHERE {
+      ?item wdt:${property} ?${variable}.
+      BIND(xsd:integer(?${variable}) AS ?numericId)
+      FILTER(?numericId >= ${Number(seed)})
+    } ORDER BY ASC(?numericId) LIMIT 1`;
+  }
+
+  function databaseTitlePickQuery(mode, year, month) {
+    const { property, variable } = idProperty(mode);
+    return `SELECT ?${variable} ?numericId WHERE {
+      ?item wdt:${property} ?${variable}; wdt:P577 ?date.
+      BIND(xsd:integer(?${variable}) AS ?numericId)
+      FILTER(YEAR(?date) = ${Number(year)} && MONTH(?date) = ${Number(month)})
+    } ORDER BY ASC(?numericId) LIMIT 1`;
+  }
+
+  async function queryId(query, mode) {
+    const data = await runSparql(query);
+    const binding = data.results.bindings[0];
+    return bindingValue(binding, mode === "movie" ? "movieTmdb" : "tvTmdb");
+  }
+
+  async function finishMatch(token, entry, metadata, label) {
+    if (token.cancelled) return;
+    addResolvedImage({ ...entry, ...metadata });
+    prefetched.set(entryKey(entry), metadata);
+    activeScan = null;
+    setScanButtons(false);
+    setStatus(`${label}: ${metadata.title} at ID ${entry.id}.`, "ok");
+    play(entry);
+  }
+
+  async function scanFromBoundary(direction, startingBoundary, label) {
+    const current = currentEntry();
     const token = { cancelled: false };
     activeScan = token;
     setScanButtons(true);
-    let candidateId = explicitStart ?? (Number.parseInt(current.id, 10) + direction);
+    let boundary = Number(startingBoundary);
 
     try {
       while (!token.cancelled) {
-        if (candidateId < 1) throw new Error("No lower numeric IDs remain.");
-        const entry = { ...current, id: String(candidateId) };
-        setStatus(`Checking public metadata for ${entry.mode} ID ${entry.id}…`);
+        if (boundary < 0) throw new Error("No lower numeric IDs remain.");
+        setStatus(`Finding the nearest resolved ${current.mode} ID ${direction > 0 ? "after" : "before"} ${boundary}…`);
+        const id = await queryId(neighborPickQuery(current.mode, boundary, direction), current.mode);
+        if (!id) throw new Error("No further public metadata matches were found.");
+        const entry = { ...current, id };
         const metadata = await findResolvedMetadata(entry);
         if (token.cancelled) return;
         if (metadata) {
-          addResolvedImage({ ...entry, ...metadata });
-          prefetched.set(entryKey(entry), metadata);
-          activeScan = null;
-          setScanButtons(false);
-          setStatus(`Found ${metadata.title} at ID ${entry.id}.`, "ok");
-          play(entry);
+          await finishMatch(token, entry, metadata, label);
           return;
         }
-        candidateId += direction;
-        await sleep(SCAN_DELAY_MS);
+        boundary = Number(id);
+        await sleep(CANDIDATE_DELAY_MS);
       }
     } catch (error) {
       if (!token.cancelled) setStatus(`Discovery stopped: ${error.message}`, "error");
@@ -211,46 +254,67 @@
     }
   }
 
-  function databasePickQuery(mode, seed) {
-    const property = mode === "movie" ? "P4947" : "P4983";
-    const idVariable = mode === "movie" ? "movieTmdb" : "tvTmdb";
-    return `SELECT ?${idVariable} ?numericId WHERE {
-      ?item wdt:${property} ?${idVariable}.
-      BIND(xsd:integer(?${idVariable}) AS ?numericId)
-      FILTER(?numericId >= ${seed})
-    } ORDER BY ?numericId LIMIT 1`;
+  async function scanNeighbor(direction) {
+    if (cancelScan()) return;
+    const current = currentEntry();
+    if (!/^\d+$/.test(current.id)) {
+      setStatus("Sequential discovery requires a numeric TMDB ID.", "warn");
+      return;
+    }
+    await scanFromBoundary(direction, Number(current.id), direction > 0 ? "Next match" : "Previous match");
   }
 
-  async function randomDatabasePick() {
+  async function randomNumberPick() {
     if (cancelScan()) return;
-    const mode = modeSelect.value;
+    const current = currentEntry();
     const token = { cancelled: false };
     activeScan = token;
     setScanButtons(true);
 
     try {
       const seed = 1 + Math.floor(Math.random() * RANDOM_MAX_ID);
-      setStatus(`Choosing a random ${mode} from the public metadata database…`);
-      let data = await runSparql(databasePickQuery(mode, seed));
-      if (!data.results.bindings.length) data = await runSparql(databasePickQuery(mode, 1));
-      if (token.cancelled) return;
-      const binding = data.results.bindings[0];
-      const id = bindingValue(binding, mode === "movie" ? "movieTmdb" : "tvTmdb");
-      if (!id) throw new Error("No usable database ID was returned.");
-      const entry = {
-        baseUrl: normalizeBaseUrl(baseUrlInput.value),
-        mode,
-        id,
-        ...(mode === "tv" ? { season: 1, episode: 1 } : {})
-      };
-      const metadata = await findResolvedMetadata(entry);
-      if (!metadata) throw new Error("The database result did not resolve to usable metadata.");
-      addResolvedImage({ ...entry, ...metadata });
-      prefetched.set(entryKey(entry), metadata);
+      setStatus(`Finding a resolved ${current.mode} near random ID ${seed}…`);
+      let id = await queryId(seedPickQuery(current.mode, seed), current.mode);
+      if (!id) id = await queryId(seedPickQuery(current.mode, 1), current.mode);
+      if (!id) throw new Error("No public metadata ID was returned.");
+      const boundary = Number(id) - 1;
       activeScan = null;
       setScanButtons(false);
-      setStatus(`Database pick: ${metadata.title}.`, "ok");
-      play(entry);
+      await scanFromBoundary(1, boundary, "Random match");
+    } catch (error) {
+      if (!token.cancelled) setStatus(`Random discovery failed: ${error.message}`, "error");
+      if (activeScan === token) activeScan = null;
+      setScanButtons(false);
+    }
+  }
+
+  async function randomDatabasePick() {
+    if (cancelScan()) return;
+    const current = currentEntry();
+    const token = { cancelled: false };
+    activeScan = token;
+    setScanButtons(true);
+
+    try {
+      const currentYear = new Date().getUTCFullYear();
+      const year = MIN_RELEASE_YEAR + Math.floor(Math.random() * (currentYear - MIN_RELEASE_YEAR + 1));
+      const month = 1 + Math.floor(Math.random() * 12);
+      setStatus(`Choosing a public-database ${current.mode} from ${year}-${String(month).padStart(2, "0")}…`);
+      let id = await queryId(databaseTitlePickQuery(current.mode, year, month), current.mode);
+      if (!id) {
+        const seed = 1 + Math.floor(Math.random() * RANDOM_MAX_ID);
+        id = await queryId(seedPickQuery(current.mode, seed), current.mode);
+      }
+      if (!id) throw new Error("No usable database ID was returned.");
+      const entry = { ...current, id };
+      const metadata = await findResolvedMetadata(entry);
+      if (!metadata) {
+        activeScan = null;
+        setScanButtons(false);
+        await scanFromBoundary(1, Number(id), "Database match");
+        return;
+      }
+      await finishMatch(token, entry, metadata, "Database pick");
     } catch (error) {
       if (!token.cancelled) setStatus(`Random database pick failed: ${error.message}`, "error");
     } finally {
@@ -260,20 +324,21 @@
   }
 
   function randomDiscovery() {
-    if ($("#randomMode")?.value === "database") return randomDatabasePick();
-    return scanNumeric(1, 1 + Math.floor(Math.random() * RANDOM_MAX_ID));
+    return $("#randomMode")?.value === "database"
+      ? randomDatabasePick()
+      : randomNumberPick();
   }
 
   $("#previousButton")?.addEventListener("click", event => {
     event.preventDefault();
     event.stopImmediatePropagation();
-    scanNumeric(-1);
+    scanNeighbor(-1);
   }, true);
 
   $("#nextButton")?.addEventListener("click", event => {
     event.preventDefault();
     event.stopImmediatePropagation();
-    scanNumeric(1);
+    scanNeighbor(1);
   }, true);
 
   $("#randomButton")?.addEventListener("click", event => {
@@ -297,6 +362,8 @@
   window.VidCoreScanner = {
     addResolvedImage,
     readQueue,
-    databasePickQuery
+    neighborPickQuery,
+    seedPickQuery,
+    databaseTitlePickQuery
   };
 })();
