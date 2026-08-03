@@ -22,9 +22,9 @@
 <button id="playButton" class="button primary" type="button">Play</button>
 <button id="nextButton" class="button" type="button">Next</button>
 <button id="favoriteButton" class="button" type="button">★ Save</button>
-<button id="theaterModeButton" class="button" type="button" aria-pressed="false" title="Fill the available browser width without entering or pretending to enter fullscreen">Theater</button>
+<button id="theaterModeButton" class="button" type="button" aria-pressed="false" title="Fill the available browser width without entering fullscreen">Theater</button>
 <button id="fullscreenButton" class="button" type="button">Fullscreen</button>
-<button id="popupGuardButton" class="button" type="button" aria-pressed="true" title="Blocks popup windows, downloads, forms, modal dialogs, and attempts to redirect the parent page">Popup blocking: On</button>
+<button id="adBlockerHelpButton" class="button" type="button" title="Official ad blocker links and local-file access instructions">Ad blockers</button>
 </header>
 
 <section class="current-card">
@@ -44,7 +44,7 @@
 <main id="playerWrap" class="player-wrap">
 <div class="player-box">
 <div id="emptyPlayer" class="empty-player"><div><strong>Ready at movie ID 1</strong>Press Play. Previous and Next remain manual.</div></div>
-<iframe id="player" class="hidden" title="Embedded media player" sandbox="allow-scripts allow-same-origin allow-presentation" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>
+<iframe id="player" class="hidden" title="Embedded media player" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
 </div>
 </main>
 </section>
@@ -95,8 +95,31 @@
 </div>
 </dialog>
 
+<dialog id="adBlockerDialog">
+<div class="dialog-body">
+<h3>Ad blocker setup</h3>
+<p class="hint">The player now uses a normal unsandboxed iframe so providers do not detect sandbox mode. Blocking is handled by your browser extension.</p>
+<div id="fileAccessHint" class="blocker-warning"></div>
+<div class="extension-links">
+<a class="button primary" href="https://microsoftedge.microsoft.com/addons/detail/ublock-origin-lite/odfafepnkmbhccpbejgmiehpchacaeak" target="_blank" rel="noopener noreferrer">uBlock Origin for Edge</a>
+<a class="button" href="https://chromewebstore.google.com/detail/pie-adblock-a-powerful-fr/jpkfgepcmmchgfbjblnodjhldacghenp" target="_blank" rel="noopener noreferrer">Pie Adblock</a>
+</div>
+<div class="blocker-steps">
+<strong>When opening index.html directly:</strong>
+<ol>
+<li>Open <code>edge://extensions</code>.</li>
+<li>Open Details for the blocker you use.</li>
+<li>Enable <strong>Allow access to file URLs</strong>.</li>
+<li>Reload this player.</li>
+</ol>
+<p>Alternatively, run <code>py -m http.server 8080</code> from the repository and open <code>http://localhost:8080/VidCoreLargePlayer/</code>.</p>
+</div>
+<div class="dialog-actions"><button id="copyExtensionsAddressButton" class="button" type="button">Copy edge://extensions</button><button id="closeAdBlockerDialog" class="button primary" type="button">Close</button></div>
+</div>
+</dialog>
+
 <script src="app.js"></script>
-<script src="popup-guard.js"></script>
+<script src="ad-blocker-help.js"></script>
 <script src="theater-mode.js"></script>
 </body>
 </html>
