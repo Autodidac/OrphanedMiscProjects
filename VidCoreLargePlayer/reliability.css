@@ -14,6 +14,10 @@ button:disabled:hover {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.random-mode {
+  width: 132px;
+}
+
 #randomButton:not(:disabled) {
   border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
 }
@@ -123,6 +127,10 @@ body.theater-mode #theaterModeButton {
 }
 
 @media (max-width: 760px) {
+  .random-mode {
+    width: 100%;
+  }
+
   body.theater-mode {
     overflow: auto;
   }
