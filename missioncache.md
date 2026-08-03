@@ -6,10 +6,10 @@
 - [x] Default the configurable base URL to `https://vidcore.net`.
 - [x] Start at movie ID `1`.
 - [x] Support movie and TV URL formats.
-- [x] Add Previous, Play, Next, Save, Theater, Fullscreen, and Popup blocking controls.
+- [x] Add Previous, Play, Next, Save, Theater, Fullscreen, and Ad blockers controls.
 - [x] Replace the oversized fixed-height iframe with a capped responsive 16:9 player.
 - [x] Add honest full-width Theater mode without spoofing browser fullscreen state.
-- [x] Hide the sidebar and title-details row in Theater mode while preserving popup blocking.
+- [x] Hide the sidebar and title-details row in Theater mode.
 - [x] Persist Theater mode and allow the **Esc** key to restore the normal layout.
 - [x] Add `VidCoreLargePlayer/tests/theater-mode.test.mjs` covering toggle, persistence, and Esc exit.
 - [x] Preserve a dedicated library sidebar without forcing the player beyond the visible desktop area.
@@ -36,11 +36,15 @@
 - [x] Add `VidCoreLargePlayer/tests/storage-startup.test.mjs` covering fallback startup and list creation.
 - [x] Validate `app.js` with `node --check` and the storage regression test.
 - [x] Delete stale `agent/*` branches and leave only `main`.
-- [x] Add strict iframe sandboxing that blocks popups, parent-page redirects, downloads, forms, and modal dialogs.
-- [x] Remove web-share and all unnecessary iframe permissions.
-- [x] Add a persisted **Popup blocking** compatibility toggle that reloads the current player.
-- [x] Add `VidCoreLargePlayer/tests/popup-guard.test.mjs` covering strict defaults and compatibility mode.
-- [x] Document storage behavior, popup blocking, Theater mode, fallback behavior, testing, and backup workflow.
+- [x] Test strict iframe sandboxing and confirm the provider detects or rejects it.
+- [x] Retire the detected iframe sandbox and restore a normal unsandboxed player iframe.
+- [x] Replace the internal popup-blocking toggle with an **Ad blockers** help dialog.
+- [x] Add official uBlock Origin for Edge and Pie Adblock links.
+- [x] Detect `file://` launches and explain **Allow access to file URLs**.
+- [x] Add a copy action for `edge://extensions` and document the localhost alternative.
+- [x] Add `VidCoreLargePlayer/tests/ad-blocker-help.test.mjs` covering the dialog, file warning, copy action, and close action.
+- [x] Retain `popup-guard.js` only as an unloaded compatibility tombstone for old cached pages.
+- [x] Document storage behavior, external ad blocker setup, Theater mode, fallback behavior, testing, and backup workflow.
 
 ## Open / deferred
 
@@ -48,5 +52,6 @@
 - [ ] Metadata quality depends on the corresponding Wikidata record.
 - [ ] Related-title ranking can be improved later with more signals than shared genres.
 - [ ] Exact playback position cannot be read from a cross-origin embedded player unless the provider exposes a supported postMessage event API.
-- [ ] A cross-origin redirect that remains entirely inside the iframe cannot be inspected or canceled by ordinary parent-page JavaScript; complete network-level filtering requires a browser extension, DNS/content blocker, or filtering proxy.
+- [ ] Browser extensions must be enabled for the player origin; `file://` launches may require explicit file-URL access.
+- [ ] Extension effectiveness depends on browser permissions, filter lists, and provider anti-blocking behavior.
 - [ ] The app intentionally does not fake `document.fullscreenElement`, fullscreen events, or browser fullscreen state for embedded providers.
