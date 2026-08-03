@@ -1,1 +1,0 @@
-Validated 2026-08-03: app.js passed node --check; index.html references app.js and styles.css; branch diff contains only the compact player, bulk resolver, Continue Watching, documentation, and mission ledger changes.
