@@ -1,0 +1,45 @@
+name: One-shot agent branch cleanup
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/cleanup-agent-branches.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete stale agent branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          for branch in \
+            agent/add-html-cycle-marker \
+            agent/add-vidcore-large-player \
+            agent/upgrade-vidcore-library \
+            agent/fix-player-size-bulk-resolver \
+            agent/fix-storage-backend-and-branches
+          do
+            encoded=${branch//\//%2F}
+            gh api --method DELETE "repos/${GH_REPO}/git/refs/heads/${encoded}" || true
+          done
+
+      - name: Remove this one-shot workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          path=.github/workflows/cleanup-agent-branches.yml
+          sha=$(gh api "repos/${GH_REPO}/contents/${path}?ref=main" --jq .sha)
+          gh api --method DELETE "repos/${GH_REPO}/contents/${path}" \
+            -f message='Remove completed one-shot branch cleanup workflow' \
+            -f sha="$sha" \
+            -f branch=main
