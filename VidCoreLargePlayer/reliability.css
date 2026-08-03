@@ -10,6 +10,14 @@ button:disabled:hover {
   background: var(--panel);
 }
 
+.tabs {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+#randomButton:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+}
+
 body.theater-mode {
   overflow: hidden;
 }
