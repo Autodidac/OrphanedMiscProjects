@@ -79,4 +79,11 @@ if (!databaseQuery.includes("P4983") || !databaseQuery.includes("YEAR(?date) = 1
   throw new Error("Database-title query is incorrect.");
 }
 
-console.log("rolling queue and direct database discovery queries passed");
+const indexHtml = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+const discoveryIndex = indexHtml.indexOf('src="discovery.js"');
+const scannerIndex = indexHtml.indexOf('src="scanner.js"');
+if (discoveryIndex < 0 || scannerIndex < 0 || scannerIndex < discoveryIndex) {
+  throw new Error("scanner.js must load after discovery.js in index.html.");
+}
+
+console.log("rolling queue, direct database discovery, and shipped script order passed");
