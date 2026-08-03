@@ -13,7 +13,7 @@ A standalone responsive HTML player with a persistent local media library.
 
 ## Compact player layout
 
-The player now uses a capped 16:9 viewport instead of a fixed `650px` minimum height. On desktop it is limited to the available content width and `68vh`, with smaller responsive minimums on tablets and phones.
+The player uses a capped 16:9 viewport instead of a fixed `650px` minimum height. On desktop it is limited to the available content width and `68vh`, with smaller responsive minimums on tablets and phones.
 
 ## Library features
 
@@ -28,18 +28,34 @@ The player now uses a capped 16:9 viewport instead of a fixed `650px` minimum he
 - Related results link to IMDb/TMDB and can place an identifier into the player field
 - Exports and imports the complete library, lists, and Continue Watching history as JSON
 
+## Storage reliability
+
+The app now uses a storage backend instead of directly dereferencing a global database handle:
+
+1. IndexedDB is opened first.
+2. Storage-dependent controls stay disabled until initialization finishes.
+3. If IndexedDB is unavailable, blocked for more than six seconds, or rejected by the browser, the app automatically uses a localStorage fallback.
+4. Every list, favorite, history, import, export, and bulk-resolution action waits for the shared storage readiness promise.
+5. Cross-tab IndexedDB version changes close the old connection and display a reload warning instead of throwing a null `transaction` error.
+
+Empty list names, the reserved name `All`, and case-insensitive duplicates are rejected with visible feedback. Editing an existing saved title preserves its notes and selected list.
+
 ## Where favorites are saved
 
-Library data is stored in the current browser profile using IndexedDB:
+Preferred storage:
 
 ```text
 Database: vidcore-library
 Stores: favorites, lists, history
 ```
 
-The data is not saved in the GitHub repository and is not synchronized across browsers or devices.
+Fallback storage uses browser localStorage keys beginning with:
 
-The older `vidcoreLargePlayer.favorites` localStorage data is migrated automatically on first load.
+```text
+vidcoreLibrary.fallback.
+```
+
+The data is not saved in the GitHub repository and is not synchronized across browsers or devices. The older `vidcoreLargePlayer.favorites` localStorage format is migrated automatically.
 
 Use **Export JSON** to back up or transfer the complete library.
 
@@ -56,6 +72,17 @@ Then open:
 ```text
 http://localhost:8080/VidCoreLargePlayer/
 ```
+
+## Validation
+
+Run the syntax check and storage-startup regression test from the repository root:
+
+```powershell
+node --check VidCoreLargePlayer/app.js
+node VidCoreLargePlayer/tests/storage-startup.test.mjs
+```
+
+The regression test runs the app with IndexedDB intentionally unavailable and verifies that fallback storage initializes, a list can be created, and case-insensitive duplicate names are rejected.
 
 ## URL formats
 
