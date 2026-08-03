@@ -27,21 +27,21 @@
 - [x] Batch bulk Wikidata resolution and limit Wikipedia repair concurrency.
 - [x] Prevent stale metadata and related-title responses from overwriting a newer title.
 - [x] Add related movie/TV suggestions with IMDb/TMDB links.
-- [x] Add metadata-first sequential scanning for numeric IDs.
-- [x] Make **Previous** and **Next** check one public metadata ID at a time until a match resolves.
-- [x] Keep unresolved scan candidates out of the video iframe.
-- [x] Delay unresolved scanner steps by 650 ms and stop on metadata errors.
-- [x] Allow any scan button to cancel an active scan.
-- [x] Add **Random ID** discovery that starts at a random numeric ID and scans forward.
-- [x] Add **Database pick** discovery that chooses an actual public metadata identifier.
+- [x] Add metadata-first discovery for numeric IDs.
+- [x] Make **Previous** and **Next** query the nearest known public-database ID directly instead of requesting every missing integer.
+- [x] Keep unresolved or unusable discovery candidates out of the video iframe.
+- [x] Retry only actual database records when a returned record still lacks usable metadata, with a 900 ms delay.
+- [x] Allow any scan button to cancel an active discovery operation.
+- [x] Add **Random ID** discovery that chooses a random numeric seed and jumps to the nearest known metadata ID.
+- [x] Add **Database pick** discovery using a random release year and month with a numeric-seed fallback.
 - [x] Stop using favorites, history, or prior choices as the Random source.
 - [x] Replace history-based recommendations with a rolling resolved-image queue.
 - [x] Add every resolved title with cover art to Recommended even when it is not saved.
-- [x] Include scanner hits, database picks, manual resolutions, related images, and repaired list entries in Recommended.
+- [x] Include discovery hits, database picks, manual resolutions, related images, and repaired list entries in Recommended.
 - [x] Deduplicate the rolling queue, promote newly resolved duplicates, and retain the newest 40 entries.
 - [x] Persist rolling discoveries under `vidcoreLibrary.discoveryQueue`.
-- [x] Add `VidCoreLargePlayer/scanner.js` as an isolated scanner layer.
-- [x] Add `VidCoreLargePlayer/tests/scanner.test.mjs` covering queue behavior and database-choice queries.
+- [x] Add `VidCoreLargePlayer/scanner.js` as an isolated discovery layer and load it after `discovery.js`.
+- [x] Add `VidCoreLargePlayer/tests/scanner.test.mjs` covering queue behavior, direct next/previous queries, random queries, and shipped script order.
 - [x] Add named lists with counts, watched state, notes, filtering, and JSON import/export.
 - [x] Add Continue Watching and include it in JSON backup.
 - [x] Split the player into focused HTML, CSS, storage, discovery, scanner, blocker-help, and theater modules.
@@ -53,7 +53,7 @@
 - [x] Add `VidCoreLargePlayer/tests/ad-blocker-help.test.mjs`.
 - [x] Retain `popup-guard.js` only as an unloaded compatibility tombstone.
 - [x] Delete stale `agent/*` branches and leave only `main`.
-- [x] Document scanner behavior, rolling recommendations, metadata fallback, storage, ad blockers, and testing.
+- [x] Document direct discovery, rolling recommendations, metadata fallback, storage, ad blockers, and testing.
 
 ## Open / deferred
 
@@ -62,4 +62,5 @@
 - [ ] Exact playback position cannot be read from a cross-origin embedded player unless the provider exposes a supported `postMessage` API.
 - [ ] Browser extensions must be enabled for the player origin; `file://` launches may require explicit file-URL access.
 - [ ] Extension effectiveness depends on browser permissions, filter lists, and provider anti-blocking behavior.
+- [ ] Public metadata discovery depends on Wikidata Query Service availability and rate limits.
 - [ ] The app intentionally does not fake browser fullscreen state.
