@@ -7,9 +7,32 @@ A standalone responsive HTML player with a persistent local media library.
 - Defaults to `https://vidcore.net`
 - Starts at movie ID `1`
 - Movie and TV modes
-- Previous, Play, Next, Save, Theater, Fullscreen, and Ad blockers controls
+- Previous, Play, Next, Random, Save, Theater, Fullscreen, and Ad blockers controls
 - TV mode uses `{series}/{season}/{episode}`
 - Previous and Next remain manual controls; the app does not scan endpoint IDs automatically
+
+## Recommendations and Random
+
+The **Recommended** tab combines three known sources without probing sequential IDs:
+
+- saved library entries
+- unfinished Continue Watching entries
+- related titles returned by metadata discovery
+
+Saved and recently played entries are marked **Known item**. Related suggestions are marked **Availability unknown** because metadata existence does not guarantee that a third-party player currently has the title.
+
+**Random** prefers a different known saved or recently played title. It uses a related suggestion only when no known alternative exists.
+
+## Improved names and cover art
+
+Metadata resolution now uses two layers:
+
+1. Wikidata resolves identifiers, names, descriptions, years, genres, IMDb/TMDB identifiers, and direct images.
+2. When the name is still generic, the description is missing, or no direct image exists, the matching English Wikipedia page is queried for a better title, introduction, and page thumbnail.
+
+**Resolve list** now also repairs entries previously marked resolved but still missing cover art, descriptions, or real names. Repair requests are limited to three concurrent Wikimedia lookups.
+
+Some entries can still remain incomplete when the identifier has no matching Wikidata record or no English Wikipedia page.
 
 ## Theater mode
 
@@ -28,7 +51,7 @@ Real **Fullscreen** remains available as a separate control.
 
 ## External ad blocker setup
 
-The embedded player now uses a normal unsandboxed iframe because some providers detect and reject sandbox mode.
+The embedded player uses a normal unsandboxed iframe because some providers detect and reject sandbox mode.
 
 The **Ad blockers** button opens:
 
@@ -60,12 +83,14 @@ The normal player uses a capped 16:9 viewport instead of a fixed `650px` minimum
 
 ## Library features
 
-- Resolves available names, descriptions, years, posters, genres, IMDb IDs, and TMDB IDs through the public Wikidata SPARQL endpoint
-- **Resolve list** resolves every unresolved item in the currently selected list, or the complete library when **All** is selected
-- Bulk resolution runs in batches of 20 entries instead of issuing one request per saved title
+- Resolves available names, descriptions, years, posters, genres, IMDb IDs, and TMDB IDs through Wikidata with a Wikipedia fallback
+- **Resolve list** resolves unresolved items and repairs incomplete names, descriptions, and cover art
+- Bulk Wikidata resolution runs in batches of 20 entries
+- Wikipedia repair runs with at most three concurrent requests
 - Saves entries into named lists with visible item counts
 - Tracks watched state and notes
 - Includes **Continue Watching** for recently played movies and TV episodes
+- Includes **Recommended** and **Random** discovery without sequential ID scanning
 - Filters the saved library
 - Suggests related movies or TV using shared Wikidata genres
 - Related results link to IMDb/TMDB and can place an identifier into the player field
@@ -114,15 +139,17 @@ Run the syntax checks and regression tests from the repository root:
 
 ```powershell
 node --check VidCoreLargePlayer/app.js
+node --check VidCoreLargePlayer/discovery.js
 node --check VidCoreLargePlayer/ad-blocker-help.js
 node --check VidCoreLargePlayer/theater-mode.js
 node VidCoreLargePlayer/tests/storage-startup.test.mjs
+node VidCoreLargePlayer/tests/discovery.test.mjs
 node VidCoreLargePlayer/tests/ad-blocker-help.test.mjs
 node VidCoreLargePlayer/tests/popup-guard.test.mjs
 node VidCoreLargePlayer/tests/theater-mode.test.mjs
 ```
 
-The storage regression test verifies fallback storage and list creation. The ad-blocker-help test verifies the dialog, local-file warning, extensions-page copy action, and close action. The retired popup-guard test verifies the sandbox is absent and the replacement is loaded. The theater-mode test verifies the layout toggle, persisted preference, and **Esc** exit behavior.
+The discovery test verifies Wikipedia metadata repair, recommendation aggregation, deduplication, and random selection that prefers known non-current titles.
 
 ## URL formats
 
