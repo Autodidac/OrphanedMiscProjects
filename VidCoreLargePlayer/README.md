@@ -7,9 +7,25 @@ A standalone responsive HTML player with a persistent local media library.
 - Defaults to `https://vidcore.net`
 - Starts at movie ID `1`
 - Movie and TV modes
-- Previous, Play, Next, Save, Fullscreen, and Popup blocking controls
+- Previous, Play, Next, Save, Theater, Fullscreen, and Popup blocking controls
 - TV mode uses `{series}/{season}/{episode}`
 - Previous and Next remain manual controls; the app does not scan endpoint IDs automatically
+
+## Theater mode
+
+**Theater** fills the available browser width without entering fullscreen or reporting a false fullscreen state to the embedded page.
+
+When enabled, it:
+
+- hides the library sidebar and title-details row
+- expands the main player to the complete browser content width
+- preserves the embedded video's aspect ratio while respecting the visible browser height
+- keeps popup blocking and all iframe sandbox restrictions unchanged
+- changes the button to **Exit theater**
+- exits with the button or the **Esc** key
+- remembers the preference in the current browser profile
+
+Real **Fullscreen** remains available as a separate control.
 
 ## Popup and redirect blocking
 
@@ -36,7 +52,7 @@ A parent page cannot inspect or cancel a cross-origin redirect that remains enti
 
 ## Compact player layout
 
-The player uses a capped 16:9 viewport instead of a fixed `650px` minimum height. On desktop it is limited to the available content width and `68vh`, with smaller responsive minimums on tablets and phones.
+The normal player uses a capped 16:9 viewport instead of a fixed `650px` minimum height. On desktop it is limited to the available content width and `68vh`, with smaller responsive minimums on tablets and phones. Theater mode removes the content-width cap and uses the full horizontal browser area.
 
 ## Library features
 
@@ -78,10 +94,11 @@ Fallback storage uses browser localStorage keys beginning with:
 vidcoreLibrary.fallback.
 ```
 
-The popup-blocking preference is stored as:
+Interface preferences are stored as:
 
 ```text
 vidcoreLibrary.strictPopupBlocking
+vidcoreLibrary.theaterMode
 ```
 
 The data is not saved in the GitHub repository and is not synchronized across browsers or devices. The older `vidcoreLargePlayer.favorites` localStorage format is migrated automatically.
@@ -109,11 +126,13 @@ Run the syntax checks and regression tests from the repository root:
 ```powershell
 node --check VidCoreLargePlayer/app.js
 node --check VidCoreLargePlayer/popup-guard.js
+node --check VidCoreLargePlayer/theater-mode.js
 node VidCoreLargePlayer/tests/storage-startup.test.mjs
 node VidCoreLargePlayer/tests/popup-guard.test.mjs
+node VidCoreLargePlayer/tests/theater-mode.test.mjs
 ```
 
-The storage regression test runs the app with IndexedDB intentionally unavailable and verifies fallback storage and list creation. The popup-guard test verifies strict blocking is enabled by default, forbidden sandbox capabilities remain absent, and compatibility mode can be toggled and persisted.
+The storage regression test verifies fallback storage and list creation. The popup-guard test verifies strict blocking and compatibility mode. The theater-mode test verifies the layout toggle, persisted preference, and **Esc** exit behavior.
 
 ## URL formats
 
