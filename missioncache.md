@@ -31,6 +31,7 @@
 - [x] Reject empty, reserved, and case-insensitive duplicate list names with visible feedback.
 - [x] Add `VidCoreLargePlayer/tests/storage-startup.test.mjs` covering fallback startup and list creation.
 - [x] Validate `app.js` with `node --check` and the storage regression test.
+- [x] Add a one-shot GitHub Actions cleanup that deletes stale `agent/*` branches and removes itself.
 - [x] Document storage behavior, fallback behavior, testing, and backup workflow.
 
 ## Open / deferred
