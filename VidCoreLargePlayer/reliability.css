@@ -15,3 +15,67 @@ button:disabled:hover {
   border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
   background: color-mix(in srgb, var(--warning) 9%, var(--panel));
 }
+
+body.theater-mode {
+  overflow: hidden;
+}
+
+body.theater-mode .app {
+  min-height: 100vh;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body.theater-mode .main {
+  min-height: 100vh;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+body.theater-mode .sidebar,
+body.theater-mode .current-card {
+  display: none !important;
+}
+
+body.theater-mode .toolbar {
+  position: relative;
+  z-index: 2;
+  padding: 8px 10px;
+}
+
+body.theater-mode .player-wrap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  background: #000;
+}
+
+body.theater-mode .player-box {
+  width: 100%;
+  height: min(56.25vw, calc(100vh - 58px));
+  min-height: 0;
+  max-height: calc(100vh - 58px);
+  aspect-ratio: auto;
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.theater-mode #theaterModeButton {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel));
+}
+
+@media (max-width: 760px) {
+  body.theater-mode {
+    overflow: auto;
+  }
+
+  body.theater-mode .player-box {
+    height: 56.25vw;
+    min-height: 220px;
+    max-height: none;
+  }
+}
