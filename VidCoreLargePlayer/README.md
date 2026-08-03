@@ -7,7 +7,7 @@ A standalone responsive HTML player with a persistent local media library.
 - Defaults to `https://vidcore.net`
 - Starts at movie ID `1`
 - Movie and TV modes
-- Previous, Play, Next, Save, Theater, Fullscreen, and Popup blocking controls
+- Previous, Play, Next, Save, Theater, Fullscreen, and Ad blockers controls
 - TV mode uses `{series}/{season}/{episode}`
 - Previous and Next remain manual controls; the app does not scan endpoint IDs automatically
 
@@ -20,35 +20,39 @@ When enabled, it:
 - hides the library sidebar and title-details row
 - expands the main player to the complete browser content width
 - preserves the embedded video's aspect ratio while respecting the visible browser height
-- keeps popup blocking and all iframe sandbox restrictions unchanged
 - changes the button to **Exit theater**
 - exits with the button or the **Esc** key
 - remembers the preference in the current browser profile
 
 Real **Fullscreen** remains available as a separate control.
 
-## Popup and redirect blocking
+## External ad blocker setup
 
-**Popup blocking: On** is the default. The embedded player receives a strict iframe sandbox with only these capabilities:
+The embedded player now uses a normal unsandboxed iframe because some providers detect and reject sandbox mode.
 
-```text
-allow-scripts allow-same-origin allow-presentation
+The **Ad blockers** button opens:
+
+- the official uBlock Origin listing for Microsoft Edge
+- the official Pie Adblock listing
+- instructions for enabling extension access when the player is opened from `file://`
+- a copy button for `edge://extensions`
+- the localhost launch command
+
+When opening `index.html` directly, Edge extensions may need **Allow access to file URLs** enabled from the extension's Details page. Without that permission, an installed blocker may not filter the embedded page reliably.
+
+The more reliable setup is:
+
+```powershell
+py -m http.server 8080
 ```
 
-Because the sandbox does **not** grant popup, top-navigation, download, form, or modal permissions, embedded pages cannot:
+Then open:
 
-- open popup or pop-under windows
-- redirect the parent player page
-- start downloads
-- submit forms
-- display JavaScript modal dialogs
-- use web-share, camera, microphone, geolocation, payment, USB, or clipboard permissions
+```text
+http://localhost:8080/VidCoreLargePlayer/
+```
 
-The iframe also uses `referrerpolicy="no-referrer"` and a restricted Permissions Policy containing only autoplay, encrypted media, fullscreen, and picture-in-picture.
-
-Some providers may refuse to play inside a sandbox. **Popup blocking: Off** removes the sandbox, reloads the current player, and stores that compatibility preference locally. Turning blocking back on reapplies the restrictions and reloads the player.
-
-A parent page cannot inspect or cancel a cross-origin redirect that remains entirely inside the iframe. The sandbox prevents that embedded page from escaping into the parent tab or opening another window, which is the protection available in ordinary browser code without a browser extension or filtering proxy.
+The retired `popup-guard.js` file remains only as a compatibility tombstone for old cached copies of `index.html`; current builds do not load it.
 
 ## Compact player layout
 
@@ -97,7 +101,6 @@ vidcoreLibrary.fallback.
 Interface preferences are stored as:
 
 ```text
-vidcoreLibrary.strictPopupBlocking
 vidcoreLibrary.theaterMode
 ```
 
@@ -105,34 +108,21 @@ The data is not saved in the GitHub repository and is not synchronized across br
 
 Use **Export JSON** to back up or transfer the complete library.
 
-## Running
-
-Open `index.html` directly. For more consistent browser storage and network behavior, use a local server:
-
-```powershell
-py -m http.server 8080
-```
-
-Then open:
-
-```text
-http://localhost:8080/VidCoreLargePlayer/
-```
-
 ## Validation
 
 Run the syntax checks and regression tests from the repository root:
 
 ```powershell
 node --check VidCoreLargePlayer/app.js
-node --check VidCoreLargePlayer/popup-guard.js
+node --check VidCoreLargePlayer/ad-blocker-help.js
 node --check VidCoreLargePlayer/theater-mode.js
 node VidCoreLargePlayer/tests/storage-startup.test.mjs
+node VidCoreLargePlayer/tests/ad-blocker-help.test.mjs
 node VidCoreLargePlayer/tests/popup-guard.test.mjs
 node VidCoreLargePlayer/tests/theater-mode.test.mjs
 ```
 
-The storage regression test verifies fallback storage and list creation. The popup-guard test verifies strict blocking and compatibility mode. The theater-mode test verifies the layout toggle, persisted preference, and **Esc** exit behavior.
+The storage regression test verifies fallback storage and list creation. The ad-blocker-help test verifies the dialog, local-file warning, extensions-page copy action, and close action. The retired popup-guard test verifies the sandbox is absent and the replacement is loaded. The theater-mode test verifies the layout toggle, persisted preference, and **Esc** exit behavior.
 
 ## URL formats
 
