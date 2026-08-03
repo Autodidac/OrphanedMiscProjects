@@ -10,12 +10,6 @@ button:disabled:hover {
   background: var(--panel);
 }
 
-#popupGuardButton.guard-off {
-  color: var(--warning);
-  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
-  background: color-mix(in srgb, var(--warning) 9%, var(--panel));
-}
-
 body.theater-mode {
   overflow: hidden;
 }
@@ -68,6 +62,58 @@ body.theater-mode #theaterModeButton {
   background: color-mix(in srgb, var(--accent) 18%, var(--panel));
 }
 
+.extension-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.extension-links .button {
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.blocker-warning {
+  display: none;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
+  border-radius: 10px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 8%, var(--panel));
+  font-size: 12px;
+}
+
+.blocker-warning:not(:empty) {
+  display: block;
+}
+
+.blocker-warning.active {
+  font-weight: 750;
+}
+
+.blocker-steps {
+  display: grid;
+  gap: 7px;
+  color: #d4dae5;
+  font-size: 12px;
+}
+
+.blocker-steps p,
+.blocker-steps ol {
+  margin: 0;
+}
+
+.blocker-steps ol {
+  padding-left: 21px;
+}
+
+.blocker-steps code {
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: var(--panel3);
+}
+
 @media (max-width: 760px) {
   body.theater-mode {
     overflow: auto;
@@ -77,5 +123,11 @@ body.theater-mode #theaterModeButton {
     height: 56.25vw;
     min-height: 220px;
     max-height: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .extension-links {
+    grid-template-columns: 1fr;
   }
 }
