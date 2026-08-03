@@ -6,7 +6,7 @@
 - [x] Default the configurable base URL to `https://vidcore.net`.
 - [x] Start at movie ID `1`.
 - [x] Support movie and TV URL formats.
-- [x] Add Previous, Play, Next, Save, Theater, Fullscreen, and Ad blockers controls.
+- [x] Add Previous, Play, Next, Random, Save, Theater, Fullscreen, and Ad blockers controls.
 - [x] Replace the oversized fixed-height iframe with a capped responsive 16:9 player.
 - [x] Add honest full-width Theater mode without spoofing browser fullscreen state.
 - [x] Hide the sidebar and title-details row in Theater mode.
@@ -16,13 +16,21 @@
 - [x] Replace flat localStorage favorites with structured IndexedDB storage.
 - [x] Migrate legacy favorites automatically.
 - [x] Resolve title names, posters, years, descriptions, genres, IMDb IDs, and TMDB IDs through Wikidata.
+- [x] Add English Wikipedia fallback resolution for generic names, missing descriptions, and missing cover art.
+- [x] Include Wikipedia article bindings in single-title and bulk Wikidata queries.
+- [x] Make **Resolve list** repair already-resolved entries with incomplete names or art.
+- [x] Limit Wikipedia metadata repair to three concurrent requests.
+- [x] Add a **Recommended** section combining library, Continue Watching, and related suggestions.
+- [x] Label saved/recent recommendations as known and related suggestions as availability unknown.
+- [x] Add **Random** selection that prefers known non-current titles before related suggestions.
+- [x] Add `VidCoreLargePlayer/tests/discovery.test.mjs` covering metadata repair, recommendation aggregation, and random selection.
 - [x] Add a bulk **Resolve list** action for the selected list or the complete library.
 - [x] Batch bulk metadata resolution in groups of 20 entries.
 - [x] Add named lists with item counts, watched state, notes, filtering, and JSON import/export.
 - [x] Add Continue Watching for recently played movies and TV episodes.
 - [x] Include Continue Watching history in JSON export/import.
 - [x] Add related movie/TV suggestions with official IMDb/TMDB links.
-- [x] Split the player into `index.html`, `styles.css`, and `app.js` for maintainability.
+- [x] Split the player into `index.html`, `styles.css`, and `app.js` plus focused enhancement scripts.
 - [x] Fix `Cannot read properties of null (reading 'transaction')` when creating lists.
 - [x] Replace the fragile global database handle with an IndexedDB/localStorage storage backend.
 - [x] Disable storage-dependent controls until storage initialization completes.
@@ -44,12 +52,12 @@
 - [x] Add a copy action for `edge://extensions` and document the localhost alternative.
 - [x] Add `VidCoreLargePlayer/tests/ad-blocker-help.test.mjs` covering the dialog, file warning, copy action, and close action.
 - [x] Retain `popup-guard.js` only as an unloaded compatibility tombstone for old cached pages.
-- [x] Document storage behavior, external ad blocker setup, Theater mode, fallback behavior, testing, and backup workflow.
+- [x] Document storage behavior, external ad blocker setup, Theater mode, metadata fallback, recommendations, testing, and backup workflow.
 
 ## Open / deferred
 
 - [ ] Optional cloud synchronization requires a user-owned backend or account provider.
-- [ ] Metadata quality depends on the corresponding Wikidata record.
+- [ ] Entries with no matching Wikidata identifier or English Wikipedia article can still have incomplete metadata.
 - [ ] Related-title ranking can be improved later with more signals than shared genres.
 - [ ] Exact playback position cannot be read from a cross-origin embedded player unless the provider exposes a supported postMessage event API.
 - [ ] Browser extensions must be enabled for the player origin; `file://` launches may require explicit file-URL access.
