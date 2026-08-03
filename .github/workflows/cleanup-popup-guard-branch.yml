@@ -1,0 +1,36 @@
+name: One-shot popup guard branch cleanup
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/cleanup-popup-guard-branch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete merged agent branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api --method DELETE "repos/${GH_REPO}/git/refs/heads/agent%2Fblock-player-popups" || true
+
+      - name: Remove this one-shot workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          path=.github/workflows/cleanup-popup-guard-branch.yml
+          sha=$(gh api "repos/${GH_REPO}/contents/${path}?ref=main" --jq .sha)
+          gh api --method DELETE "repos/${GH_REPO}/contents/${path}" \
+            -f message='Remove completed popup guard branch cleanup workflow' \
+            -f sha="$sha" \
+            -f branch=main
