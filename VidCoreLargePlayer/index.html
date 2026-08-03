@@ -18,10 +18,11 @@
 <input id="mediaId" class="control id" value="1" aria-label="Media ID" autocomplete="off" spellcheck="false">
 <input id="season" class="control number hidden" type="number" min="0" step="1" value="1" aria-label="Season">
 <input id="episode" class="control number hidden" type="number" min="1" step="1" value="1" aria-label="Episode">
-<button id="previousButton" class="button" type="button">Previous</button>
+<button id="previousButton" class="button" type="button" title="Scan backward until a public metadata match is found">Previous</button>
 <button id="playButton" class="button primary" type="button">Play</button>
-<button id="nextButton" class="button" type="button">Next</button>
-<button id="randomButton" class="button" type="button" disabled title="Pick from known saved or recently played titles before trying related suggestions">Random</button>
+<button id="nextButton" class="button" type="button" title="Scan forward until a public metadata match is found">Next</button>
+<select id="randomMode" class="control random-mode" aria-label="Random discovery source"><option value="number">Random ID</option><option value="database">Database pick</option></select>
+<button id="randomButton" class="button" type="button" title="Start from a random numeric ID or choose a title from the public metadata database">Random</button>
 <button id="favoriteButton" class="button" type="button">★ Save</button>
 <button id="theaterModeButton" class="button" type="button" aria-pressed="false" title="Fill the available browser width without entering fullscreen">Theater</button>
 <button id="fullscreenButton" class="button" type="button">Fullscreen</button>
@@ -33,7 +34,7 @@
 <div class="current-info">
 <h1 id="currentTitle" class="current-title">Movie ID 1</h1>
 <div id="currentMeta" class="current-meta"><span>Unresolved</span></div>
-<p id="currentDescription" class="current-description">Press Play to load the current ID and resolve available metadata.</p>
+<p id="currentDescription" class="current-description">Play the current ID, or use Previous/Next to scan public metadata until a title resolves.</p>
 </div>
 <div class="current-actions">
 <a id="currentImdb" class="button hidden" target="_blank" rel="noopener noreferrer">IMDb</a>
@@ -44,14 +45,14 @@
 
 <main id="playerWrap" class="player-wrap">
 <div class="player-box">
-<div id="emptyPlayer" class="empty-player"><div><strong>Ready at movie ID 1</strong>Press Play. Previous and Next remain manual.</div></div>
+<div id="emptyPlayer" class="empty-player"><div><strong>Ready at movie ID 1</strong>Play directly, scan to the next resolved title, or make a random database choice.</div></div>
 <iframe id="player" class="hidden" title="Embedded media player" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
 </div>
 </main>
 </section>
 
 <aside class="sidebar">
-<div class="side-head"><h2>Your Library</h2><div class="hint">Lists, recommendations, random picks, Continue Watching, metadata repair, backup, and related titles.</div></div>
+<div class="side-head"><h2>Your Library</h2><div class="hint">Lists, rolling discoveries, Continue Watching, metadata repair, backup, and related titles.</div></div>
 <nav class="tabs">
 <button class="tab active" type="button" data-panel="library">Library</button>
 <button class="tab" type="button" data-panel="continue">Continue</button>
@@ -70,7 +71,7 @@
 </section>
 
 <section id="continuePanel" class="side-content hidden"><div id="continueCards" class="cards"><div class="empty-list">Play a saved or recent title to add it here.</div></div></section>
-<section id="recommendedPanel" class="side-content hidden"><div id="recommendedCards" class="cards"><div class="empty-list">Resolve a title, save favorites, or play something to build recommendations.</div></div></section>
+<section id="recommendedPanel" class="side-content hidden"><div id="recommendedCards" class="cards"><div class="empty-list">Resolved titles with cover art appear here automatically, even when they are not saved.</div></div></section>
 <section id="relatedPanel" class="side-content hidden"><div id="relatedCards" class="cards"><div class="empty-list">Resolve a title to load related movies or TV.</div></div></section>
 
 <footer class="side-footer">
@@ -93,7 +94,7 @@
 <dialog id="storageDialog">
 <div class="dialog-body">
 <h3>Where your library is saved</h3>
-<div class="hint">Favorites, lists, and Continue Watching use IndexedDB when available. If IndexedDB is unavailable or blocked, the app automatically uses a localStorage fallback in the same browser profile. Data is not committed to GitHub or synced automatically. Export JSON for backup or transfer.</div>
+<div class="hint">Favorites, lists, Continue Watching, and the rolling discovery queue use browser storage. Data is not committed to GitHub or synced automatically. Export JSON for library backup or transfer.</div>
 <div class="dialog-actions"><button id="closeStorage" class="button primary" type="button">Close</button></div>
 </div>
 </dialog>
