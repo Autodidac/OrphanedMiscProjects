@@ -7,9 +7,32 @@ A standalone responsive HTML player with a persistent local media library.
 - Defaults to `https://vidcore.net`
 - Starts at movie ID `1`
 - Movie and TV modes
-- Previous, Play, Next, Save, and Fullscreen
+- Previous, Play, Next, Save, Fullscreen, and Popup blocking controls
 - TV mode uses `{series}/{season}/{episode}`
 - Previous and Next remain manual controls; the app does not scan endpoint IDs automatically
+
+## Popup and redirect blocking
+
+**Popup blocking: On** is the default. The embedded player receives a strict iframe sandbox with only these capabilities:
+
+```text
+allow-scripts allow-same-origin allow-presentation
+```
+
+Because the sandbox does **not** grant popup, top-navigation, download, form, or modal permissions, embedded pages cannot:
+
+- open popup or pop-under windows
+- redirect the parent player page
+- start downloads
+- submit forms
+- display JavaScript modal dialogs
+- use web-share, camera, microphone, geolocation, payment, USB, or clipboard permissions
+
+The iframe also uses `referrerpolicy="no-referrer"` and a restricted Permissions Policy containing only autoplay, encrypted media, fullscreen, and picture-in-picture.
+
+Some providers may refuse to play inside a sandbox. **Popup blocking: Off** removes the sandbox, reloads the current player, and stores that compatibility preference locally. Turning blocking back on reapplies the restrictions and reloads the player.
+
+A parent page cannot inspect or cancel a cross-origin redirect that remains entirely inside the iframe. The sandbox prevents that embedded page from escaping into the parent tab or opening another window, which is the protection available in ordinary browser code without a browser extension or filtering proxy.
 
 ## Compact player layout
 
@@ -30,7 +53,7 @@ The player uses a capped 16:9 viewport instead of a fixed `650px` minimum height
 
 ## Storage reliability
 
-The app now uses a storage backend instead of directly dereferencing a global database handle:
+The app uses a storage backend instead of directly dereferencing a global database handle:
 
 1. IndexedDB is opened first.
 2. Storage-dependent controls stay disabled until initialization finishes.
@@ -55,6 +78,12 @@ Fallback storage uses browser localStorage keys beginning with:
 vidcoreLibrary.fallback.
 ```
 
+The popup-blocking preference is stored as:
+
+```text
+vidcoreLibrary.strictPopupBlocking
+```
+
 The data is not saved in the GitHub repository and is not synchronized across browsers or devices. The older `vidcoreLargePlayer.favorites` localStorage format is migrated automatically.
 
 Use **Export JSON** to back up or transfer the complete library.
@@ -75,14 +104,16 @@ http://localhost:8080/VidCoreLargePlayer/
 
 ## Validation
 
-Run the syntax check and storage-startup regression test from the repository root:
+Run the syntax checks and regression tests from the repository root:
 
 ```powershell
 node --check VidCoreLargePlayer/app.js
+node --check VidCoreLargePlayer/popup-guard.js
 node VidCoreLargePlayer/tests/storage-startup.test.mjs
+node VidCoreLargePlayer/tests/popup-guard.test.mjs
 ```
 
-The regression test runs the app with IndexedDB intentionally unavailable and verifies that fallback storage initializes, a list can be created, and case-insensitive duplicate names are rejected.
+The storage regression test runs the app with IndexedDB intentionally unavailable and verifies fallback storage and list creation. The popup-guard test verifies strict blocking is enabled by default, forbidden sandbox capabilities remain absent, and compatibility mode can be toggled and persisted.
 
 ## URL formats
 
