@@ -10,39 +10,41 @@ A standalone responsive HTML player with a persistent local media library and me
 - Previous, Play, Next, Random, Save, Theater, Fullscreen, and Ad blockers controls
 - TV mode uses `{series}/{season}/{episode}`
 
-## Metadata-first Previous and Next
+## Direct Previous and Next discovery
 
-**Previous** and **Next** now scan numeric TMDB identifiers through public metadata before loading the embedded player.
+**Previous** and **Next** use the public metadata database to jump directly to the nearest known numeric TMDB identifier before loading the embedded player.
 
-The scanner:
+The discovery path:
 
-- checks one identifier at a time
-- waits 650 ms between unresolved identifiers
-- does not load unresolved identifiers into the video iframe
-- continues until it finds a real metadata match
-- loads the matched title automatically
+- requests the nearest database ID above or below the current ID
+- does not request every missing integer between titles
+- resolves the returned title and cover metadata
+- keeps unusable or generic metadata out of the video iframe
+- continues to the next actual database record only when a returned record still lacks usable metadata
+- waits 900 ms between those exceptional candidate retries
+- loads the first usable title automatically
 - changes Previous, Next, and Random to **Stop scan** while active
-- stops immediately when any scan button is pressed again
+- stops immediately when a scan button is pressed again
 - stops on metadata-service errors instead of retrying aggressively
 
-Sequential scanning requires a numeric TMDB identifier. IMDb-style `tt...` identifiers can still be played directly, but they are not numerically incremented.
+Sequential discovery requires a numeric TMDB identifier. IMDb-style `tt...` identifiers can still be played directly, but they are not numerically ordered.
 
 ## Random discovery
 
 The selector beside **Random** offers two modes:
 
-- **Random ID** — chooses a random numeric starting point and scans forward until metadata resolves.
-- **Database pick** — chooses an actual movie or TV identifier from the public metadata database, resolves it, and loads it.
+- **Random ID** — chooses a random numeric seed, asks the public database for the nearest known ID at or above that seed, resolves it, and loads it.
+- **Database pick** — chooses a random release year and month, requests a matching public-database movie or TV identifier, resolves it, and loads it. It falls back to a random numeric seed when that month has no match.
 
-Random discovery no longer selects from saved favorites, Continue Watching, or prior choices.
+Random discovery does not select from saved favorites, Continue Watching, or prior choices.
 
 ## Rolling Recommended queue
 
-The **Recommended** tab is now a rolling discovery queue rather than a history-based recommendation list.
+The **Recommended** tab is a rolling discovery queue rather than a history-based recommendation list.
 
 Any title that resolves with cover art is added automatically, including:
 
-- sequential scanner matches
+- Previous and Next matches
 - random ID matches
 - public-database picks
 - manually resolved current titles
@@ -147,6 +149,8 @@ node VidCoreLargePlayer/tests/ad-blocker-help.test.mjs
 node VidCoreLargePlayer/tests/popup-guard.test.mjs
 node VidCoreLargePlayer/tests/theater-mode.test.mjs
 ```
+
+The scanner regression verifies rolling-queue behavior, direct next/previous database queries, random-number and database-title queries, and that `scanner.js` is loaded after `discovery.js` by the shipped page.
 
 ## URL formats
 
