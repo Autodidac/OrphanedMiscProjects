@@ -19,13 +19,20 @@
 - [x] Include Continue Watching history in JSON export/import.
 - [x] Add related movie/TV suggestions with official IMDb/TMDB links.
 - [x] Split the player into `index.html`, `styles.css`, and `app.js` for maintainability.
-- [x] Fix the IndexedDB startup race that caused `Cannot read properties of null (reading 'transaction')` when creating lists.
-- [x] Disable storage-dependent controls until IndexedDB is ready.
-- [x] Add shared database readiness checks to every favorites, lists, history, import, export, and bulk-action path.
-- [x] Handle blocked upgrades and cross-tab IndexedDB version changes without null dereferences.
+- [x] Fix `Cannot read properties of null (reading 'transaction')` when creating lists.
+- [x] Replace the fragile global database handle with an IndexedDB/localStorage storage backend.
+- [x] Disable storage-dependent controls until storage initialization completes.
+- [x] Make every favorites, lists, history, import, export, and bulk-action path wait for shared storage readiness.
+- [x] Fall back to browser localStorage when IndexedDB is unavailable, blocked, or rejected.
+- [x] Handle cross-tab IndexedDB version changes without null dereferences.
+- [x] Queue Continue Watching updates when playback starts before storage initialization completes.
+- [x] Prevent stale metadata and related-title responses from overwriting a newer selected title.
 - [x] Preserve existing notes and list selection when editing a saved title.
-- [x] Reject duplicate and empty list names with visible feedback.
-- [x] Document local storage behavior and backup workflow.
+- [x] Reject empty, reserved, and case-insensitive duplicate list names with visible feedback.
+- [x] Add `VidCoreLargePlayer/tests/storage-startup.test.mjs` covering fallback startup and list creation.
+- [x] Validate `app.js` with `node --check` and the storage regression test.
+- [x] Add a one-shot GitHub Actions cleanup that deletes stale `agent/*` branches and removes itself.
+- [x] Document storage behavior, fallback behavior, testing, and backup workflow.
 
 ## Open / deferred
 

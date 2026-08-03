@@ -6,6 +6,7 @@
 <meta name="color-scheme" content="dark">
 <title>VidCore Library Player</title>
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="reliability.css">
 </head>
 <body>
 <div class="app">
@@ -87,7 +88,7 @@
 <dialog id="storageDialog">
 <div class="dialog-body">
 <h3>Where your library is saved</h3>
-<div class="hint">Favorites, lists, and Continue Watching are stored in this browser profile using IndexedDB database <code>vidcore-library</code>. They are not committed to GitHub or synced automatically. Export JSON for backup or transfer. Legacy localStorage favorites migrate automatically.</div>
+<div class="hint">Favorites, lists, and Continue Watching use IndexedDB when available. If IndexedDB is unavailable or blocked, the app automatically uses a localStorage fallback in the same browser profile. Data is not committed to GitHub or synced automatically. Export JSON for backup or transfer.</div>
 <div class="dialog-actions"><button id="closeStorage" class="button primary" type="button">Close</button></div>
 </div>
 </dialog>

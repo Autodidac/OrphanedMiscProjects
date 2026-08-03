@@ -1,0 +1,11 @@
+button:disabled,
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+button:disabled:hover {
+  border-color: var(--border);
+  background: var(--panel);
+}
