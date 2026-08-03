@@ -23,6 +23,7 @@
 <button id="nextButton" class="button" type="button">Next</button>
 <button id="favoriteButton" class="button" type="button">★ Save</button>
 <button id="fullscreenButton" class="button" type="button">Fullscreen</button>
+<button id="popupGuardButton" class="button" type="button" aria-pressed="true" title="Blocks popup windows, downloads, forms, modal dialogs, and attempts to redirect the parent page">Popup blocking: On</button>
 </header>
 
 <section class="current-card">
@@ -42,7 +43,7 @@
 <main id="playerWrap" class="player-wrap">
 <div class="player-box">
 <div id="emptyPlayer" class="empty-player"><div><strong>Ready at movie ID 1</strong>Press Play. Previous and Next remain manual.</div></div>
-<iframe id="player" class="hidden" title="Embedded media player" allow="autoplay; encrypted-media; fullscreen; picture-in-picture; web-share" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<iframe id="player" class="hidden" title="Embedded media player" sandbox="allow-scripts allow-same-origin allow-presentation" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>
 </div>
 </main>
 </section>
@@ -94,5 +95,6 @@
 </dialog>
 
 <script src="app.js"></script>
+<script src="popup-guard.js"></script>
 </body>
 </html>
