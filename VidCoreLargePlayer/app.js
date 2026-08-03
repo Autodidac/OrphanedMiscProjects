@@ -5,19 +5,21 @@ const DB_VERSION = 3;
 const FAVORITES_STORE = "favorites";
 const LISTS_STORE = "lists";
 const HISTORY_STORE = "history";
+const STORE_NAMES = [FAVORITES_STORE, LISTS_STORE, HISTORY_STORE];
 const LEGACY_KEY = "vidcoreLargePlayer.favorites";
+const FALLBACK_PREFIX = "vidcoreLibrary.fallback.";
 const SETTINGS_PREFIX = "vidcoreLibrary.";
 
 const state = {
-  db: null,
-  dbReady: null,
+  storage: null,
+  storageReady: null,
+  storageMode: "pending",
   selectedList: "All",
   currentMetadata: null,
   currentMetadataKey: "",
   related: [],
   lists: ["Favorites"],
-  activePanel: "library",
-  initialized: false
+  activePanel: "library"
 };
 
 const $ = selector => document.querySelector(selector);
@@ -50,6 +52,102 @@ function transactionDone(transaction) {
   });
 }
 
+class IndexedDbBackend {
+  constructor(database) {
+    this.database = database;
+  }
+
+  transaction(storeName, mode) {
+    if (!this.database) throw new Error("IndexedDB connection is closed.");
+    return this.database.transaction(storeName, mode);
+  }
+
+  async getAll(storeName) {
+    const transaction = this.transaction(storeName, "readonly");
+    const result = await requestPromise(transaction.objectStore(storeName).getAll());
+    await transactionDone(transaction);
+    return result;
+  }
+
+  async get(storeName, key) {
+    const transaction = this.transaction(storeName, "readonly");
+    const result = await requestPromise(transaction.objectStore(storeName).get(key));
+    await transactionDone(transaction);
+    return result;
+  }
+
+  async put(storeName, value) {
+    const transaction = this.transaction(storeName, "readwrite");
+    transaction.objectStore(storeName).put(value);
+    await transactionDone(transaction);
+  }
+
+  async delete(storeName, key) {
+    const transaction = this.transaction(storeName, "readwrite");
+    transaction.objectStore(storeName).delete(key);
+    await transactionDone(transaction);
+  }
+
+  close() {
+    this.database?.close();
+    this.database = null;
+  }
+}
+
+class LocalStorageBackend {
+  constructor(prefix) {
+    this.prefix = prefix;
+    for (const storeName of STORE_NAMES) {
+      const key = this.storeKey(storeName);
+      if (localStorage.getItem(key) === null) localStorage.setItem(key, "{}");
+    }
+  }
+
+  storeKey(storeName) {
+    return `${this.prefix}${storeName}`;
+  }
+
+  readStore(storeName) {
+    try {
+      const value = JSON.parse(localStorage.getItem(this.storeKey(storeName)) ?? "{}");
+      return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    } catch {
+      return {};
+    }
+  }
+
+  writeStore(storeName, value) {
+    localStorage.setItem(this.storeKey(storeName), JSON.stringify(value));
+  }
+
+  async getAll(storeName) {
+    return Object.values(this.readStore(storeName));
+  }
+
+  async get(storeName, key) {
+    return this.readStore(storeName)[String(key)];
+  }
+
+  async put(storeName, value) {
+    const keyPath = storeName === LISTS_STORE ? "name" : "key";
+    const key = value?.[keyPath];
+    if (key === undefined || key === null || key === "") {
+      throw new Error(`Cannot save ${storeName}: missing ${keyPath}.`);
+    }
+    const store = this.readStore(storeName);
+    store[String(key)] = value;
+    this.writeStore(storeName, store);
+  }
+
+  async delete(storeName, key) {
+    const store = this.readStore(storeName);
+    delete store[String(key)];
+    this.writeStore(storeName, store);
+  }
+
+  close() {}
+}
+
 function setStorageActionsEnabled(enabled) {
   const ids = [
     "favoriteButton",
@@ -66,73 +164,98 @@ function setStorageActionsEnabled(enabled) {
   }
 }
 
-async function requireDatabase() {
-  if (!state.dbReady) {
-    throw new Error("Library storage has not started yet.");
-  }
+async function openIndexedDatabase(timeoutMilliseconds = 6000) {
+  if (!window.indexedDB) throw new Error("This browser does not support IndexedDB.");
 
-  await state.dbReady;
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error("IndexedDB did not become ready in time."));
+    }, timeoutMilliseconds);
 
-  if (!state.db) {
-    throw new Error("Library storage is unavailable. Reload the page or use a normal browser window.");
-  }
+    request.onupgradeneeded = () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains(FAVORITES_STORE)) {
+        const favorites = database.createObjectStore(FAVORITES_STORE, { keyPath: "key" });
+        favorites.createIndex("list", "list", { unique: false });
+        favorites.createIndex("title", "title", { unique: false });
+      }
+      if (!database.objectStoreNames.contains(LISTS_STORE)) {
+        database.createObjectStore(LISTS_STORE, { keyPath: "name" });
+      }
+      if (!database.objectStoreNames.contains(HISTORY_STORE)) {
+        const history = database.createObjectStore(HISTORY_STORE, { keyPath: "key" });
+        history.createIndex("lastPlayedAt", "lastPlayedAt", { unique: false });
+      }
+    };
 
-  return state.db;
+    request.onblocked = () => {
+      setStatus("IndexedDB is blocked by another open copy. Falling back if it stays blocked.", "warn");
+    };
+
+    request.onerror = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      reject(request.error ?? new Error("IndexedDB failed to open."));
+    };
+
+    request.onsuccess = () => {
+      const database = request.result;
+      if (settled) {
+        database.close();
+        return;
+      }
+      settled = true;
+      window.clearTimeout(timeout);
+      resolve(database);
+    };
+  });
 }
 
-async function openDatabase() {
-  if (!window.indexedDB) {
-    throw new Error("This browser does not support IndexedDB.");
+async function initializeStorage() {
+  try {
+    const database = await openIndexedDatabase();
+    const backend = new IndexedDbBackend(database);
+    database.onversionchange = () => {
+      backend.close();
+      if (state.storage === backend) {
+        state.storage = null;
+        state.storageMode = "closed";
+        setStorageActionsEnabled(false);
+        setStatus("Library storage changed in another tab. Reload this page.", "warn");
+      }
+    };
+    state.storage = backend;
+    state.storageMode = "indexeddb";
+  } catch (error) {
+    state.storage = new LocalStorageBackend(FALLBACK_PREFIX);
+    state.storageMode = "localstorage";
+    setStatus(`IndexedDB unavailable; using localStorage fallback. ${error.message}`, "warn");
   }
 
-  const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-  request.onupgradeneeded = () => {
-    const db = request.result;
-
-    if (!db.objectStoreNames.contains(FAVORITES_STORE)) {
-      const favorites = db.createObjectStore(FAVORITES_STORE, { keyPath: "key" });
-      favorites.createIndex("list", "list", { unique: false });
-      favorites.createIndex("title", "title", { unique: false });
-    }
-
-    if (!db.objectStoreNames.contains(LISTS_STORE)) {
-      db.createObjectStore(LISTS_STORE, { keyPath: "name" });
-    }
-
-    if (!db.objectStoreNames.contains(HISTORY_STORE)) {
-      const history = db.createObjectStore(HISTORY_STORE, { keyPath: "key" });
-      history.createIndex("lastPlayedAt", "lastPlayedAt", { unique: false });
-    }
-  };
-
-  request.onblocked = () => {
-    setStatus("Library upgrade is blocked by another open copy of this page. Close the other copy and reload.", "warn");
-  };
-
-  const db = await requestPromise(request);
-  db.onversionchange = () => {
-    db.close();
-    if (state.db === db) state.db = null;
-    setStorageActionsEnabled(false);
-    setStatus("Library storage changed in another tab. Reload this page.", "warn");
-  };
-
-  state.db = db;
   await ensureDefaultList();
   await migrateLegacyFavorites();
-  return db;
+  return state.storage;
+}
+
+async function requireStorage() {
+  if (state.storage) return state.storage;
+  if (!state.storageReady) throw new Error("Library storage has not started yet.");
+  await state.storageReady;
+  if (!state.storage) throw new Error("Library storage is unavailable. Reload the page.");
+  return state.storage;
 }
 
 async function ensureDefaultList() {
-  const db = await requireDatabase();
-  const transaction = db.transaction(LISTS_STORE, "readwrite");
-  const store = transaction.objectStore(LISTS_STORE);
-  const existing = await requestPromise(store.get("Favorites"));
+  const storage = await requireStorage();
+  const existing = await storage.get(LISTS_STORE, "Favorites");
   if (!existing) {
-    store.put({ name: "Favorites", createdAt: new Date().toISOString() });
+    await storage.put(LISTS_STORE, { name: "Favorites", createdAt: new Date().toISOString() });
   }
-  await transactionDone(transaction);
 }
 
 async function migrateLegacyFavorites() {
@@ -142,14 +265,10 @@ async function migrateLegacyFavorites() {
   try {
     const entries = JSON.parse(raw);
     if (!Array.isArray(entries)) return;
-
-    const db = await requireDatabase();
-    const transaction = db.transaction(FAVORITES_STORE, "readwrite");
-    const store = transaction.objectStore(FAVORITES_STORE);
+    const storage = await requireStorage();
     const now = new Date().toISOString();
-
     for (const entry of entries) {
-      const normalized = {
+      await storage.put(FAVORITES_STORE, {
         ...entry,
         key: entryKey(entry),
         title: entry.title || fallbackTitle(entry),
@@ -158,46 +277,36 @@ async function migrateLegacyFavorites() {
         watched: Boolean(entry.watched),
         createdAt: entry.createdAt || now,
         updatedAt: now
-      };
-      store.put(normalized);
+      });
     }
-
-    await transactionDone(transaction);
     localStorage.removeItem(LEGACY_KEY);
-    setStatus("Migrated old favorites into IndexedDB.", "ok");
+    setStatus("Migrated old favorites into the library.", "ok");
   } catch (error) {
     setStatus(`Old favorites could not be migrated: ${error.message}`, "warn");
   }
 }
 
 async function getAll(storeName) {
-  const db = await requireDatabase();
-  const transaction = db.transaction(storeName, "readonly");
-  const result = await requestPromise(transaction.objectStore(storeName).getAll());
-  await transactionDone(transaction);
-  return result;
+  return (await requireStorage()).getAll(storeName);
 }
 
 async function getValue(storeName, key) {
-  const db = await requireDatabase();
-  const transaction = db.transaction(storeName, "readonly");
-  const result = await requestPromise(transaction.objectStore(storeName).get(key));
-  await transactionDone(transaction);
-  return result;
+  return (await requireStorage()).get(storeName, key);
 }
 
 async function putValue(storeName, value) {
-  const db = await requireDatabase();
-  const transaction = db.transaction(storeName, "readwrite");
-  transaction.objectStore(storeName).put(value);
-  await transactionDone(transaction);
+  await (await requireStorage()).put(storeName, value);
 }
 
 async function deleteValue(storeName, key) {
-  const db = await requireDatabase();
-  const transaction = db.transaction(storeName, "readwrite");
-  transaction.objectStore(storeName).delete(key);
-  await transactionDone(transaction);
+  await (await requireStorage()).delete(storeName, key);
+}
+
+function queueStorageTask(task) {
+  if (!state.storageReady) return;
+  state.storageReady
+    .then(() => task())
+    .catch(error => setStatus(`Library update failed: ${error.message}`, "warn"));
 }
 
 function normalizeBaseUrl(value) {
@@ -372,20 +481,28 @@ async function runSparql(query) {
   return response.json();
 }
 
+function isCurrentEntry(entry) {
+  return entryKey(currentEntrySafe()) === entryKey(entry);
+}
+
 async function resolveMetadata(entry, quiet = false) {
-  if (!quiet) setStatus(`Resolving ${fallbackTitle(entry)}…`);
+  if (!quiet && isCurrentEntry(entry)) setStatus(`Resolving ${fallbackTitle(entry)}…`);
   const data = await runSparql(metadataQuery(entry));
   const metadata = metadataFromBinding(entry, data.results.bindings[0]);
-  state.currentMetadata = metadata;
-  state.currentMetadataKey = entryKey(entry);
-  renderCurrent(entry, metadata);
-  await loadRelated(entry, metadata);
-  if (!quiet) {
-    setStatus(
-      metadata.resolutionStatus === "resolved" ? `Resolved: ${metadata.title}` : "No metadata match found.",
-      metadata.resolutionStatus === "resolved" ? "ok" : "warn"
-    );
+
+  if (isCurrentEntry(entry)) {
+    state.currentMetadata = metadata;
+    state.currentMetadataKey = entryKey(entry);
+    renderCurrent(entry, metadata);
+    await loadRelated(entry, metadata);
+    if (!quiet) {
+      setStatus(
+        metadata.resolutionStatus === "resolved" ? `Resolved: ${metadata.title}` : "No metadata match found.",
+        metadata.resolutionStatus === "resolved" ? "ok" : "warn"
+      );
+    }
   }
+
   return metadata;
 }
 
@@ -418,7 +535,6 @@ function bulkMetadataQuery(entries) {
 }
 
 async function resolveSelectedList() {
-  await requireDatabase();
   let entries = await getAll(FAVORITES_STORE);
   if (state.selectedList !== "All") entries = entries.filter(entry => entry.list === state.selectedList);
   if (!entries.length) {
@@ -551,24 +667,27 @@ async function play(entry = currentEntry()) {
     renderRelated();
     setStatus(`Loaded ${fallbackTitle(entry)}.`);
 
-    if (state.db) {
+    queueStorageTask(async () => {
       await recordHistory(entry);
       await renderContinueWatching();
-    }
+    });
 
     resolveMetadata(entry, true)
-      .then(async metadata => {
-        if (!state.db) return;
-        await recordHistory(entry, metadata, false);
-        const favorite = await getValue(FAVORITES_STORE, entryKey(entry));
-        if (favorite) {
-          await putValue(FAVORITES_STORE, { ...favorite, ...metadata, updatedAt: new Date().toISOString() });
-        }
-        await renderListControls();
-        await renderLibrary();
-        await renderContinueWatching();
+      .then(metadata => {
+        queueStorageTask(async () => {
+          await recordHistory(entry, metadata, false);
+          const favorite = await getValue(FAVORITES_STORE, entryKey(entry));
+          if (favorite) {
+            await putValue(FAVORITES_STORE, { ...favorite, ...metadata, updatedAt: new Date().toISOString() });
+          }
+          await renderListControls();
+          await renderLibrary();
+          await renderContinueWatching();
+        });
       })
-      .catch(error => setStatus(`Player loaded; metadata lookup failed: ${error.message}`, "warn"));
+      .catch(error => {
+        if (isCurrentEntry(entry)) setStatus(`Player loaded; metadata lookup failed: ${error.message}`, "warn");
+      });
   } catch (error) {
     setStatus(error.message, "error");
   }
@@ -618,7 +737,6 @@ async function renderListControls() {
 }
 
 async function addList() {
-  await requireDatabase();
   const input = $("#newListName");
   const name = input.value.trim();
   if (!name) {
@@ -630,9 +748,9 @@ async function addList() {
     return;
   }
 
-  const existing = await getValue(LISTS_STORE, name);
-  if (existing) {
-    setStatus(`List already exists: ${name}`, "warn");
+  const duplicate = state.lists.find(existing => existing.localeCompare(name, undefined, { sensitivity: "accent" }) === 0);
+  if (duplicate) {
+    setStatus(`List already exists: ${duplicate}`, "warn");
     return;
   }
 
@@ -647,13 +765,15 @@ async function addList() {
 
 async function openSaveDialog() {
   try {
-    await requireDatabase();
+    await requireStorage();
     const entry = currentEntry();
-    if (!state.currentMetadata || state.currentMetadataKey !== entryKey(entry)) {
+    const key = entryKey(entry);
+    if (!state.currentMetadata || state.currentMetadataKey !== key) {
       await resolveMetadata(entry);
     }
+    if (!isCurrentEntry(entry)) throw new Error("The selected title changed while metadata was resolving.");
 
-    const existing = await getValue(FAVORITES_STORE, entryKey(entry));
+    const existing = await getValue(FAVORITES_STORE, key);
     $("#saveNotes").value = existing?.notes || "";
     if (existing?.list && state.lists.includes(existing.list)) $("#saveList").value = existing.list;
     $("#saveDialog").showModal();
@@ -665,7 +785,6 @@ async function openSaveDialog() {
 async function saveCurrentFavorite(event) {
   event.preventDefault();
   try {
-    await requireDatabase();
     const entry = currentEntry();
     const metadata = state.currentMetadataKey === entryKey(entry)
       ? state.currentMetadata
@@ -750,7 +869,6 @@ async function toggleWatched(key) {
 }
 
 async function markSelectedListWatched() {
-  await requireDatabase();
   const entries = selectedEntries(await getAll(FAVORITES_STORE));
   if (!entries.length) {
     setStatus("Nothing in this list.", "warn");
@@ -830,15 +948,19 @@ function relatedQuery(entry, metadata) {
 }
 
 async function loadRelated(entry, metadata) {
+  const expectedKey = entryKey(entry);
   const query = relatedQuery(entry, metadata);
   if (!query) {
-    state.related = [];
-    renderRelated();
+    if (isCurrentEntry(entry)) {
+      state.related = [];
+      renderRelated();
+    }
     return;
   }
 
   try {
     const data = await runSparql(query);
+    if (entryKey(currentEntrySafe()) !== expectedKey) return;
     const seen = new Set();
     state.related = data.results.bindings
       .map(binding => ({
@@ -852,9 +974,9 @@ async function loadRelated(entry, metadata) {
       .filter(item => item.title && !seen.has(item.title) && seen.add(item.title))
       .slice(0, 10);
   } catch {
-    state.related = [];
+    if (isCurrentEntry(entry)) state.related = [];
   }
-  renderRelated();
+  if (isCurrentEntry(entry)) renderRelated();
 }
 
 function renderRelated() {
@@ -881,9 +1003,9 @@ function renderRelated() {
 }
 
 async function exportLibrary() {
-  await requireDatabase();
   const payload = {
     version: 3,
+    storageMode: state.storageMode,
     exportedAt: new Date().toISOString(),
     favorites: await getAll(FAVORITES_STORE),
     lists: await getAll(LISTS_STORE),
@@ -900,7 +1022,6 @@ async function exportLibrary() {
 }
 
 async function importLibrary(file) {
-  await requireDatabase();
   const payload = JSON.parse(await file.text());
   if (!Array.isArray(payload.favorites) || !Array.isArray(payload.lists)) {
     throw new Error("Invalid library export.");
@@ -1050,18 +1171,18 @@ async function initialize() {
   setStorageActionsEnabled(false);
   setStatus("Opening local library storage…");
 
-  state.dbReady = openDatabase();
+  state.storageReady = initializeStorage();
 
   try {
-    await state.dbReady;
+    await state.storageReady;
     await loadLists();
     await renderLibrary();
     await renderContinueWatching();
-    state.initialized = true;
     setStorageActionsEnabled(true);
-    setStatus("Library ready. Resolve list updates every unresolved title at once.", "ok");
+    const label = state.storageMode === "indexeddb" ? "IndexedDB" : "localStorage fallback";
+    setStatus(`Library ready using ${label}.`, state.storageMode === "indexeddb" ? "ok" : "warn");
   } catch (error) {
-    state.db = null;
+    state.storage = null;
     setStorageActionsEnabled(false);
     setStatus(`Storage failed: ${error.message}`, "error");
   }
