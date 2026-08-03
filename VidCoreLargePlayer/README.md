@@ -1,6 +1,6 @@
 # VidCore Library Player
 
-A standalone large-screen HTML player with a persistent local media library.
+A standalone responsive HTML player with a persistent local media library.
 
 ## Core controls
 
@@ -9,31 +9,39 @@ A standalone large-screen HTML player with a persistent local media library.
 - Movie and TV modes
 - Previous, Play, Next, Save, and Fullscreen
 - TV mode uses `{series}/{season}/{episode}`
+- Previous and Next remain manual controls; the app does not scan endpoint IDs automatically
 
-## Library upgrades
+## Compact player layout
 
-- Resolves available title names, descriptions, years, posters, genres, IMDb IDs, and TMDB IDs through the public Wikidata SPARQL endpoint
-- Saves entries into named lists
+The player now uses a capped 16:9 viewport instead of a fixed `650px` minimum height. On desktop it is limited to the available content width and `68vh`, with smaller responsive minimums on tablets and phones.
+
+## Library features
+
+- Resolves available names, descriptions, years, posters, genres, IMDb IDs, and TMDB IDs through the public Wikidata SPARQL endpoint
+- **Resolve list** resolves every unresolved item in the currently selected list, or the complete library when **All** is selected
+- Bulk resolution runs in batches of 20 entries instead of issuing one request per saved title
+- Saves entries into named lists with visible item counts
 - Tracks watched state and notes
+- Includes **Continue Watching** for recently played movies and TV episodes
 - Filters the saved library
 - Suggests related movies or TV using shared Wikidata genres
-- Related results link to IMDb/TMDB and can copy an identifier into the player field
-- Exports and imports the complete library as JSON
+- Related results link to IMDb/TMDB and can place an identifier into the player field
+- Exports and imports the complete library, lists, and Continue Watching history as JSON
 
 ## Where favorites are saved
 
-Favorites and named lists are stored in the current browser profile using IndexedDB:
+Library data is stored in the current browser profile using IndexedDB:
 
 ```text
 Database: vidcore-library
-Stores: favorites, lists
+Stores: favorites, lists, history
 ```
 
-They are not saved in the GitHub repository and are not synchronized across browsers or devices.
+The data is not saved in the GitHub repository and is not synchronized across browsers or devices.
 
 The older `vidcoreLargePlayer.favorites` localStorage data is migrated automatically on first load.
 
-Use **Export JSON** to back up or transfer the library.
+Use **Export JSON** to back up or transfer the complete library.
 
 ## Running
 
@@ -62,5 +70,3 @@ TV:
 ```text
 {base_url}/tv/{tmdb_series_id}/{season}/{episode}
 ```
-
-Previous and Next are manual controls. The app does not automatically scan endpoint IDs.
