@@ -9,3 +9,9 @@ button:disabled:hover {
   border-color: var(--border);
   background: var(--panel);
 }
+
+#popupGuardButton.guard-off {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--border));
+  background: color-mix(in srgb, var(--warning) 9%, var(--panel));
+}

@@ -31,8 +31,12 @@
 - [x] Reject empty, reserved, and case-insensitive duplicate list names with visible feedback.
 - [x] Add `VidCoreLargePlayer/tests/storage-startup.test.mjs` covering fallback startup and list creation.
 - [x] Validate `app.js` with `node --check` and the storage regression test.
-- [x] Add a one-shot GitHub Actions cleanup that deletes stale `agent/*` branches and removes itself.
-- [x] Document storage behavior, fallback behavior, testing, and backup workflow.
+- [x] Delete stale `agent/*` branches and leave only `main`.
+- [x] Add strict iframe sandboxing that blocks popups, parent-page redirects, downloads, forms, and modal dialogs.
+- [x] Remove web-share and all unnecessary iframe permissions.
+- [x] Add a persisted **Popup blocking** compatibility toggle that reloads the current player.
+- [x] Add `VidCoreLargePlayer/tests/popup-guard.test.mjs` covering strict defaults and compatibility mode.
+- [x] Document storage behavior, popup blocking, fallback behavior, testing, and backup workflow.
 
 ## Open / deferred
 
@@ -40,3 +44,4 @@
 - [ ] Metadata quality depends on the corresponding Wikidata record.
 - [ ] Related-title ranking can be improved later with more signals than shared genres.
 - [ ] Exact playback position cannot be read from a cross-origin embedded player unless the provider exposes a supported postMessage event API.
+- [ ] A cross-origin redirect that remains entirely inside the iframe cannot be inspected or canceled by ordinary parent-page JavaScript; complete network-level filtering requires a browser extension, DNS/content blocker, or filtering proxy.
