@@ -6,8 +6,12 @@
 - [x] Default the configurable base URL to `https://vidcore.net`.
 - [x] Start at movie ID `1`.
 - [x] Support movie and TV URL formats.
-- [x] Add Previous, Play, Next, Save, and Fullscreen controls.
+- [x] Add Previous, Play, Next, Save, Theater, Fullscreen, and Popup blocking controls.
 - [x] Replace the oversized fixed-height iframe with a capped responsive 16:9 player.
+- [x] Add honest full-width Theater mode without spoofing browser fullscreen state.
+- [x] Hide the sidebar and title-details row in Theater mode while preserving popup blocking.
+- [x] Persist Theater mode and allow the **Esc** key to restore the normal layout.
+- [x] Add `VidCoreLargePlayer/tests/theater-mode.test.mjs` covering toggle, persistence, and Esc exit.
 - [x] Preserve a dedicated library sidebar without forcing the player beyond the visible desktop area.
 - [x] Replace flat localStorage favorites with structured IndexedDB storage.
 - [x] Migrate legacy favorites automatically.
@@ -36,7 +40,7 @@
 - [x] Remove web-share and all unnecessary iframe permissions.
 - [x] Add a persisted **Popup blocking** compatibility toggle that reloads the current player.
 - [x] Add `VidCoreLargePlayer/tests/popup-guard.test.mjs` covering strict defaults and compatibility mode.
-- [x] Document storage behavior, popup blocking, fallback behavior, testing, and backup workflow.
+- [x] Document storage behavior, popup blocking, Theater mode, fallback behavior, testing, and backup workflow.
 
 ## Open / deferred
 
@@ -45,3 +49,4 @@
 - [ ] Related-title ranking can be improved later with more signals than shared genres.
 - [ ] Exact playback position cannot be read from a cross-origin embedded player unless the provider exposes a supported postMessage event API.
 - [ ] A cross-origin redirect that remains entirely inside the iframe cannot be inspected or canceled by ordinary parent-page JavaScript; complete network-level filtering requires a browser extension, DNS/content blocker, or filtering proxy.
+- [ ] The app intentionally does not fake `document.fullscreenElement`, fullscreen events, or browser fullscreen state for embedded providers.
