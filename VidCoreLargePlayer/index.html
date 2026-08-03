@@ -21,6 +21,7 @@
 <button id="previousButton" class="button" type="button">Previous</button>
 <button id="playButton" class="button primary" type="button">Play</button>
 <button id="nextButton" class="button" type="button">Next</button>
+<button id="randomButton" class="button" type="button" disabled title="Pick from known saved or recently played titles before trying related suggestions">Random</button>
 <button id="favoriteButton" class="button" type="button">★ Save</button>
 <button id="theaterModeButton" class="button" type="button" aria-pressed="false" title="Fill the available browser width without entering fullscreen">Theater</button>
 <button id="fullscreenButton" class="button" type="button">Fullscreen</button>
@@ -50,10 +51,11 @@
 </section>
 
 <aside class="sidebar">
-<div class="side-head"><h2>Your Library</h2><div class="hint">Lists, Continue Watching, bulk metadata resolution, watched state, backup, and related titles.</div></div>
+<div class="side-head"><h2>Your Library</h2><div class="hint">Lists, recommendations, random picks, Continue Watching, metadata repair, backup, and related titles.</div></div>
 <nav class="tabs">
 <button class="tab active" type="button" data-panel="library">Library</button>
 <button class="tab" type="button" data-panel="continue">Continue</button>
+<button class="tab" type="button" data-panel="recommended">Recommended</button>
 <button class="tab" type="button" data-panel="related">Related</button>
 </nav>
 
@@ -68,6 +70,7 @@
 </section>
 
 <section id="continuePanel" class="side-content hidden"><div id="continueCards" class="cards"><div class="empty-list">Play a saved or recent title to add it here.</div></div></section>
+<section id="recommendedPanel" class="side-content hidden"><div id="recommendedCards" class="cards"><div class="empty-list">Resolve a title, save favorites, or play something to build recommendations.</div></div></section>
 <section id="relatedPanel" class="side-content hidden"><div id="relatedCards" class="cards"><div class="empty-list">Resolve a title to load related movies or TV.</div></div></section>
 
 <footer class="side-footer">
@@ -98,7 +101,7 @@
 <dialog id="adBlockerDialog">
 <div class="dialog-body">
 <h3>Ad blocker setup</h3>
-<p class="hint">The player now uses a normal unsandboxed iframe so providers do not detect sandbox mode. Blocking is handled by your browser extension.</p>
+<p class="hint">The player uses a normal unsandboxed iframe so providers do not detect sandbox mode. Blocking is handled by your browser extension.</p>
 <div id="fileAccessHint" class="blocker-warning"></div>
 <div class="extension-links">
 <a class="button primary" href="https://microsoftedge.microsoft.com/addons/detail/ublock-origin-lite/odfafepnkmbhccpbejgmiehpchacaeak" target="_blank" rel="noopener noreferrer">uBlock Origin for Edge</a>
@@ -119,6 +122,7 @@
 </dialog>
 
 <script src="app.js"></script>
+<script src="discovery.js"></script>
 <script src="ad-blocker-help.js"></script>
 <script src="theater-mode.js"></script>
 </body>
